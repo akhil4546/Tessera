@@ -1,0 +1,19 @@
+@import 'tailwindcss';
+@import '@tessera/tokens/theme.css';
+@source "../../../../packages/ui/src";
+
+@theme inline {
+  --font-sans: var(--font-tessera-sans), var(--tessera-font-sans);
+  --font-display: var(--font-tessera-display), var(--tessera-font-display);
+}
+
+html,
+body {
+  min-height: 100%;
+  background: var(--tessera-surface);
+  color: var(--tessera-text-primary);
+}
+
+body {
+  font-family: var(--font-sans);
+}

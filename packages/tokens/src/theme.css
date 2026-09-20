@@ -1,0 +1,79 @@
+/* Tessera semantic tokens. Imported by web/admin Tailwind entry CSS. */
+
+:root {
+  color-scheme: light;
+  --tessera-surface: #f4ede3;
+  --tessera-surface-elevated: #fffbf6;
+  --tessera-surface-muted: #e8dfd2;
+  --tessera-text-primary: #1f1b16;
+  --tessera-text-secondary: #5c534a;
+  --tessera-text-inverse: #f4ede3;
+  --tessera-accent: #b04732;
+  --tessera-accent-hover: #9b3f2c;
+  --tessera-accent-muted: #f3d4cc;
+  --tessera-moss: #5b7553;
+  --tessera-slate: #4a5a6a;
+  --tessera-danger: #a33b3b;
+  --tessera-border: #d9cfc2;
+  --tessera-border-strong: #c4b8a8;
+  --tessera-ring: #c8553d;
+  --tessera-overlay: rgb(31 27 22 / 0.48);
+  --tessera-shadow-tile: 0 1px 2px rgb(31 27 22 / 0.06), 0 8px 24px rgb(31 27 22 / 0.06);
+  --tessera-radius-tile: 12px;
+  --tessera-radius-tile-lg: 16px;
+  --tessera-duration-fast: 150ms;
+  --tessera-duration-base: 250ms;
+  --tessera-font-display: 'Fraunces', 'Iowan Old Style', 'Palatino Linotype', Palatino, serif;
+  --tessera-font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+[data-theme='dark'] {
+  color-scheme: dark;
+  --tessera-surface: #1c1916;
+  --tessera-surface-elevated: #26211c;
+  --tessera-surface-muted: #2f2923;
+  --tessera-text-primary: #f4ede3;
+  --tessera-text-secondary: #c4b8a8;
+  --tessera-text-inverse: #1c1916;
+  --tessera-accent: #d46850;
+  --tessera-accent-hover: #e07a64;
+  --tessera-accent-muted: #4a2c26;
+  --tessera-moss: #8fa887;
+  --tessera-slate: #8a9aab;
+  --tessera-danger: #e07070;
+  --tessera-border: #3a332c;
+  --tessera-border-strong: #52483e;
+  --tessera-ring: #d46850;
+  --tessera-overlay: rgb(0 0 0 / 0.64);
+  --tessera-shadow-tile: 0 1px 2px rgb(0 0 0 / 0.4), 0 8px 24px rgb(0 0 0 / 0.35);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --tessera-duration-fast: 0ms;
+    --tessera-duration-base: 0ms;
+  }
+}
+
+@theme inline {
+  --color-surface: var(--tessera-surface);
+  --color-surface-elevated: var(--tessera-surface-elevated);
+  --color-surface-muted: var(--tessera-surface-muted);
+  --color-text-primary: var(--tessera-text-primary);
+  --color-text-secondary: var(--tessera-text-secondary);
+  --color-text-inverse: var(--tessera-text-inverse);
+  --color-accent: var(--tessera-accent);
+  --color-accent-hover: var(--tessera-accent-hover);
+  --color-accent-muted: var(--tessera-accent-muted);
+  --color-moss: var(--tessera-moss);
+  --color-slate: var(--tessera-slate);
+  --color-danger: var(--tessera-danger);
+  --color-border: var(--tessera-border);
+  --color-border-strong: var(--tessera-border-strong);
+  --color-ring: var(--tessera-ring);
+  --font-display: var(--tessera-font-display);
+  --font-sans: var(--tessera-font-sans);
+  --radius-tile: var(--tessera-radius-tile);
+  --radius-tile-lg: var(--tessera-radius-tile-lg);
+  --shadow-tile: var(--tessera-shadow-tile);
+}

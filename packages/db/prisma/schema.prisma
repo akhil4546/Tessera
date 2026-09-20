@@ -1,0 +1,1599 @@
+// Tessera Phase 9 — identity, graph, posts, feed, Moments, Loops, Discovery, Inbox,
+// notifications, Circles, Boards, drafts, scheduled posts, safety, and admin.
+
+generator client {
+  provider               = "prisma-client"
+  output                 = "../src/generated/prisma"
+  moduleFormat           = "esm"
+  generatedFileExtension = "ts"
+  importFileExtension    = "ts"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum AccountType {
+  personal
+  creator
+  business
+}
+
+enum FollowStatus {
+  pending
+  accepted
+}
+
+enum MuteScope {
+  posts
+  moments
+  both
+}
+
+enum AuthProvider {
+  google
+  apple
+}
+
+enum EmailTokenType {
+  verify_email
+  reset_password
+}
+
+enum PostKind {
+  post
+  loop
+}
+
+enum PostVisibility {
+  public
+  followers
+  circles
+}
+
+enum AuthenticityKind {
+  unfiltered
+  edited
+  ai_generated
+}
+
+enum MediaKind {
+  image
+  video
+  audio
+}
+
+enum MediaStatus {
+  awaiting_upload
+  uploaded
+  processing
+  ready
+  failed
+}
+
+enum MediaPurpose {
+  post
+  avatar
+  moment
+  loop
+  message
+}
+
+enum CaptionStatus {
+  pending
+  ready
+  skipped
+  failed
+}
+
+enum MomentVisibility {
+  public
+  followers
+  circles
+}
+
+enum MomentStickerKind {
+  text
+  drawing
+  mention
+  location
+  hashtag
+  poll
+  question
+  countdown
+  link
+}
+
+enum CropAspect {
+  original
+  square
+  portrait
+  landscape
+}
+
+enum AppreciationKind {
+  inspiring
+  funny
+  love
+  useful
+}
+
+enum WhoCanMessage {
+  everyone
+  followers
+  nobody
+}
+
+enum ConversationKind {
+  direct
+  group
+}
+
+enum ConversationMemberRole {
+  owner
+  admin
+  member
+}
+
+enum MessageKind {
+  text
+  image
+  video
+  voice
+  post
+  loop
+  moment
+  system
+}
+
+/// v1 stores plaintext. Future E2E writes ciphertext and leaves body empty.
+enum BodyEncoding {
+  plaintext
+  ciphertext
+}
+
+enum MessageRequestStatus {
+  pending
+  accepted
+  declined
+}
+
+enum NotificationKind {
+  new_follower
+  follow_request
+  appreciation
+  comment
+  reply
+  mention
+  tag
+  moment_reaction
+  board_invite
+  scheduled_post_published
+  security_alert
+}
+
+enum DevicePlatform {
+  expo
+  web_push
+}
+
+enum BoardVisibility {
+  private
+  shared
+  public
+}
+
+enum DraftKind {
+  post
+  loop
+  moment
+}
+
+enum SensitivityLevel {
+  hide
+  warn
+  show
+}
+
+enum ReportTargetKind {
+  post
+  comment
+  moment
+  loop
+  message
+  conversation
+  account
+}
+
+enum ReportReason {
+  spam
+  harassment
+  hate
+  nudity
+  violence
+  self_harm
+  impersonation
+  underage
+  other
+}
+
+enum ReportStatus {
+  open
+  linked
+  withdrawn
+}
+
+enum ModerationCaseStatus {
+  open
+  in_review
+  actioned
+  dismissed
+}
+
+enum ModerationCaseSource {
+  report
+  classifier
+  keyword
+  spam
+}
+
+enum ModerationActionKind {
+  dismiss
+  takedown
+  restore
+  suspend
+  unsuspend
+  mark_sensitive
+  unmark_sensitive
+  hide_comment
+  warn
+}
+
+enum AppealStatus {
+  pending
+  upheld
+  rejected
+}
+
+enum AdminRole {
+  moderator
+  admin
+  superadmin
+}
+
+enum KeywordFilterAction {
+  flag
+  hide
+  queue
+}
+
+enum ClassificationLabel {
+  unknown
+  none
+  likely
+}
+
+enum ExportJobStatus {
+  pending
+  running
+  ready
+  failed
+}
+
+enum DeletionRequestStatus {
+  pending
+  cancelled
+  completed
+}
+
+model User {
+  id               String    @id @default(cuid())
+  email            String    @unique
+  passwordHash     String?
+  handle           String    @unique
+  handleChangedAt  DateTime?
+  dateOfBirth      DateTime  @db.Date
+  isMinor          Boolean   @default(false)
+  emailVerifiedAt  DateTime?
+  deactivatedAt    DateTime?
+  suspendedAt      DateTime?
+  suspendReason    String?
+  suspensionEndsAt DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  profile       Profile?
+  sessions      Session[]
+  totp          TotpSecret?
+  recoveryCodes RecoveryCode[]
+  emailTokens   EmailToken[]
+  oauthAccounts OauthAccount[]
+
+  following      Follow[] @relation("Follower")
+  followers      Follow[] @relation("Followee")
+  blocksCreated  Block[]  @relation("Blocker")
+  blocksReceived Block[]  @relation("Blocked")
+  mutesCreated     Mute[]     @relation("Muter")
+  mutesReceived    Mute[]     @relation("Muted")
+  restrictsCreated Restrict[] @relation("Restrictor")
+  restrictsReceived Restrict[] @relation("Restricted")
+
+  posts              Post[]
+  media              MediaItem[]
+  appreciations      Appreciation[]
+  comments           Comment[]
+  commentLikes       CommentLike[]
+  commentFilters     CommentFilter[]
+  peopleTags         PeopleTag[]
+  heroTiles          HeroTile[]
+  feedEntries           FeedEntry[]
+  feedState             FeedState?
+  idempotencyRecords    IdempotencyRecord[]
+  moments               Moment[]
+  momentViews           MomentView[]
+  momentReactions       MomentReaction[]
+  momentStickerResponses MomentStickerResponse[]
+  reelShelves           ReelShelf[]
+  audioTracks           AudioTrack[]
+  wellbeing             WellbeingSetting?
+  watchLogs             WatchTimeLog[]
+  rankingPreference     RankingPreference?
+  hashtagFollows        HashtagFollow[]
+  recentSearches        RecentSearch[]
+  discoverImpressions   DiscoverImpression[]
+  suggestionDismissals  SuggestedPersonDismiss[] @relation("SuggestionViewer")
+  dismissedBy           SuggestedPersonDismiss[] @relation("SuggestionDismissed")
+  conversationsCreated  Conversation[]           @relation("ConversationCreator")
+  conversationMembers   ConversationMember[]
+  sentMessages          Message[]
+  messageReactions      MessageReaction[]
+  messageRequestsFrom   MessageRequest[]         @relation("RequestFrom")
+  messageRequestsTo     MessageRequest[]         @relation("RequestTo")
+  notifications         Notification[]
+  notificationPreference NotificationPreference?
+  devices               Device[]
+  circlesOwned          Circle[]
+  circleMemberships     CircleMember[]
+  boardsOwned           Board[]
+  boardCollaborations   BoardCollaborator[]
+  boardFollows          BoardFollow[]
+  boardItemsAdded       BoardItem[]
+  drafts                Draft[]
+  reportsFiled          Report[]           @relation("Reporter")
+  reportsAbout          Report[]           @relation("ReportedUser")
+  moderationCases       ModerationCase[]   @relation("CaseSubject")
+  appealsFiled          Appeal[]
+  auditLogsAsSubject    AuditLog[]         @relation("AuditSubjectUser")
+  exportJobs            ExportJob[]
+  deletionRequests      DeletionRequest[]
+  appTimeLogs           AppTimeLog[]
+
+  @@index([createdAt])
+  @@index([suspendedAt])
+  @@map("users")
+}
+
+model Profile {
+  id                  String            @id @default(cuid())
+  userId              String            @unique
+  user                User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  displayName         String
+  bio                 String            @default("")
+  avatarKey           String?
+  pronouns            String?
+  category            String?
+  accountType         AccountType       @default(personal)
+  isPrivate           Boolean           @default(false)
+  memoryMapEnabled    Boolean           @default(true)
+  defaultAppreciation    AppreciationKind @default(love)
+  /// Expired Moments stay on the author's archive instead of being deleted.
+  momentArchiveEnabled   Boolean          @default(false)
+  activityStatusEnabled  Boolean          @default(true)
+  readReceiptsEnabled    Boolean          @default(true)
+  whoCanMessage          WhoCanMessage    @default(everyone)
+  /// hide = skip sensitive tiles; warn = blur until "Show anyway"; show = unblurred.
+  sensitivityLevel       SensitivityLevel @default(warn)
+  /// Up to three { title, url } objects. Validated in application code.
+  links                  Json             @default("[]")
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+
+  @@map("profiles")
+}
+
+model Session {
+  id               String    @id @default(cuid())
+  userId           String
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  refreshTokenHash String    @unique
+  familyId         String
+  replacedById     String?
+  userAgent        String?
+  ip               String?
+  lastUsedAt       DateTime  @default(now())
+  expiresAt        DateTime
+  revokedAt        DateTime?
+  createdAt        DateTime  @default(now())
+
+  @@index([userId, revokedAt])
+  @@index([familyId])
+  @@map("sessions")
+}
+
+model OauthAccount {
+  id                String       @id @default(cuid())
+  userId            String
+  user              User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider          AuthProvider
+  providerAccountId String
+  createdAt         DateTime     @default(now())
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+  @@map("oauth_accounts")
+}
+
+model TotpSecret {
+  id              String    @id @default(cuid())
+  userId          String    @unique
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  secretEncrypted String
+  enabledAt       DateTime?
+  createdAt       DateTime  @default(now())
+
+  @@map("totp_secrets")
+}
+
+model RecoveryCode {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  codeHash  String
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@map("recovery_codes")
+}
+
+model EmailToken {
+  id         String         @id @default(cuid())
+  userId     String
+  user       User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type       EmailTokenType
+  tokenHash  String         @unique
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime       @default(now())
+
+  @@index([userId, type])
+  @@map("email_tokens")
+}
+
+model Follow {
+  id          String       @id @default(cuid())
+  followerId  String
+  followeeId  String
+  status      FollowStatus @default(accepted)
+  createdAt   DateTime     @default(now())
+  acceptedAt  DateTime?
+  follower    User         @relation("Follower", fields: [followerId], references: [id], onDelete: Cascade)
+  followee    User         @relation("Followee", fields: [followeeId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, followeeId])
+  @@index([followeeId, status, createdAt])
+  @@index([followerId, status, createdAt])
+  @@map("follows")
+}
+
+model Block {
+  id        String   @id @default(cuid())
+  blockerId String
+  blockedId String
+  createdAt DateTime @default(now())
+  blocker   User     @relation("Blocker", fields: [blockerId], references: [id], onDelete: Cascade)
+  blocked   User     @relation("Blocked", fields: [blockedId], references: [id], onDelete: Cascade)
+
+  @@unique([blockerId, blockedId])
+  @@index([blockedId])
+  @@map("blocks")
+}
+
+model Mute {
+  id        String    @id @default(cuid())
+  muterId   String
+  mutedId   String
+  scope     MuteScope @default(both)
+  createdAt DateTime  @default(now())
+  muter     User      @relation("Muter", fields: [muterId], references: [id], onDelete: Cascade)
+  muted     User      @relation("Muted", fields: [mutedId], references: [id], onDelete: Cascade)
+
+  @@unique([muterId, mutedId])
+  @@index([mutedId])
+  @@map("mutes")
+}
+
+/// Restricted person's comments on the restrictor's posts are hidden from others until approved.
+model Restrict {
+  id           String   @id @default(cuid())
+  restrictorId String
+  restrictedId String
+  createdAt    DateTime @default(now())
+  restrictor   User     @relation("Restrictor", fields: [restrictorId], references: [id], onDelete: Cascade)
+  restricted   User     @relation("Restricted", fields: [restrictedId], references: [id], onDelete: Cascade)
+
+  @@unique([restrictorId, restrictedId])
+  @@index([restrictedId])
+  @@map("restricts")
+}
+
+model Post {
+  id                       String            @id @default(cuid())
+  authorId                 String
+  author                   User              @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  kind                     PostKind          @default(post)
+  visibility               PostVisibility    @default(public)
+  caption                  String            @default("")
+  locationName             String?
+  placeId                  String?
+  place                    Place?            @relation(fields: [placeId], references: [id], onDelete: SetNull)
+  commentsEnabled          Boolean           @default(true)
+  publicAppreciationCounts Boolean           @default(false)
+  authenticity             AuthenticityKind
+  editedAt                 DateTime?
+  publishedAt              DateTime?
+  scheduledAt              DateTime?
+  archivedAt               DateTime?
+  deletedAt                DateTime?
+  takenDownAt              DateTime?
+  sensitive                Boolean           @default(false)
+  createdAt                DateTime          @default(now())
+  updatedAt                DateTime          @updatedAt
+
+  media         MediaItem[]
+  hashtags      PostHashtag[]
+  appreciations Appreciation[]
+  comments      Comment[]
+  heroTiles     HeroTile[]
+  feedEntries   FeedEntry[]
+  loop          Loop?
+  originalAudio AudioTrack? @relation("OriginalAudioSource")
+  watchLogs     WatchTimeLog[]
+  discoverImpressions DiscoverImpression[]
+  audiences     PostAudience[]
+  boardItems    BoardItem[]
+
+  @@index([authorId, publishedAt(sort: Desc)])
+  @@index([publishedAt(sort: Desc), id(sort: Desc)])
+  @@index([kind, publishedAt(sort: Desc)])
+  @@index([placeId])
+  @@index([scheduledAt, publishedAt])
+  @@map("posts")
+}
+
+model MediaItem {
+  id               String       @id @default(cuid())
+  ownerId          String
+  owner            User         @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  postId           String?
+  post             Post?        @relation(fields: [postId], references: [id], onDelete: SetNull)
+  purpose          MediaPurpose @default(post)
+  kind             MediaKind
+  mimeType         String
+  byteSize         Int
+  originalKey      String
+  /// { widths: { "320": { webp, avif } }, posterKey?, hls?: { masterKey } }
+  variants         Json         @default("{}")
+  width            Int?
+  height           Int?
+  aspect           Float?
+  blurhash         String?
+  durationMs       Int?
+  altText          String       @default("")
+  crop             CropAspect   @default(original)
+  filterId         String       @default("none")
+  /// { brightness, contrast, warmth, saturation, fade, vignette, sharpen }
+  adjustments      Json         @default("{}")
+  sortOrder        Int          @default(0)
+  status           MediaStatus  @default(awaiting_upload)
+  processingError  String?
+  /// Author or classifier marked this item as sensitive. Does not fake a verdict.
+  sensitive        Boolean      @default(false)
+  /// True when classification asked to hold publish. Stub never sets this.
+  moderationHold   Boolean      @default(false)
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  peopleTags         PeopleTag[]
+  momentSegments     MomentSegment[]
+  reelShelfCovers    ReelShelf[]          @relation("ReelShelfCover")
+  messageAttachments MessageAttachment[]
+  classifications    MediaClassification[]
+
+  @@index([ownerId, createdAt])
+  @@index([postId, sortOrder])
+  @@map("media_items")
+}
+
+model Hashtag {
+  id        String         @id @default(cuid())
+  tag       String         @unique
+  createdAt DateTime       @default(now())
+  posts     PostHashtag[]
+  follows   HashtagFollow[]
+
+  @@map("hashtags")
+}
+
+model HashtagFollow {
+  userId    String
+  hashtagId String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  hashtag   Hashtag  @relation(fields: [hashtagId], references: [id], onDelete: Cascade)
+
+  @@id([userId, hashtagId])
+  @@index([hashtagId])
+  @@map("hashtag_follows")
+}
+
+/// Author-typed place. Coordinates are never taken from EXIF (GPS is stripped).
+model Place {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  lat       Float?
+  lng       Float?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  posts     Post[]
+
+  @@index([name])
+  @@map("places")
+}
+
+model PostHashtag {
+  postId    String
+  hashtagId String
+  post      Post    @relation(fields: [postId], references: [id], onDelete: Cascade)
+  hashtag   Hashtag @relation(fields: [hashtagId], references: [id], onDelete: Cascade)
+
+  @@id([postId, hashtagId])
+  @@index([hashtagId])
+  @@map("post_hashtags")
+}
+
+model PeopleTag {
+  id           String    @id @default(cuid())
+  mediaId      String
+  media        MediaItem @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+  taggedUserId String
+  taggedUser   User      @relation(fields: [taggedUserId], references: [id], onDelete: Cascade)
+  x            Float
+  y            Float
+  createdAt    DateTime  @default(now())
+
+  @@unique([mediaId, taggedUserId])
+  @@map("people_tags")
+}
+
+model HeroTile {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  position  Int
+  createdAt DateTime @default(now())
+
+  @@unique([userId, position])
+  @@unique([userId, postId])
+  @@index([postId])
+  @@map("hero_tiles")
+}
+
+model Appreciation {
+  id        String            @id @default(cuid())
+  userId    String
+  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  postId    String
+  post      Post              @relation(fields: [postId], references: [id], onDelete: Cascade)
+  kind      AppreciationKind
+  createdAt DateTime          @default(now())
+
+  @@unique([userId, postId])
+  @@index([postId, kind])
+  @@map("appreciations")
+}
+
+model Comment {
+  id             String        @id @default(cuid())
+  postId         String
+  post           Post          @relation(fields: [postId], references: [id], onDelete: Cascade)
+  authorId       String
+  author         User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  parentId       String?
+  parent         Comment?      @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies        Comment[]     @relation("CommentReplies")
+  body           String
+  pinnedAt            DateTime?
+  hiddenByFilter      Boolean       @default(false)
+  /// Restricted commenter's body is only visible to them until the author approves.
+  hiddenByRestrict    Boolean       @default(false)
+  restrictApprovedAt  DateTime?
+  deletedAt           DateTime?
+  takenDownAt         DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  likes          CommentLike[]
+
+  @@index([postId, createdAt])
+  @@index([parentId])
+  @@map("comments")
+}
+
+model CommentLike {
+  userId    String
+  commentId String
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  comment   Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@id([userId, commentId])
+  @@map("comment_likes")
+}
+
+model CommentFilter {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  keyword   String
+  createdAt DateTime @default(now())
+
+  @@unique([userId, keyword])
+  @@map("comment_filters")
+}
+
+model FeedEntry {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  postId      String
+  post        Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  authorId    String
+  publishedAt DateTime
+  createdAt   DateTime @default(now())
+
+  @@unique([userId, postId])
+  @@index([userId, publishedAt(sort: Desc), postId])
+  @@index([authorId])
+  @@map("feed_entries")
+}
+
+model FeedState {
+  userId                String    @id
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  followingCaughtUpAt   DateTime?
+  lastVisitAt           DateTime?
+  lastVisitNewCount     Int       @default(0)
+  updatedAt             DateTime  @updatedAt
+
+  @@map("feed_states")
+}
+
+model IdempotencyRecord {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  key       String
+  route     String
+  status    Int
+  body      Json
+  createdAt DateTime @default(now())
+
+  @@unique([userId, key, route])
+  @@index([createdAt])
+  @@map("idempotency_records")
+}
+
+model Moment {
+  id          String            @id @default(cuid())
+  authorId    String
+  author      User              @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  visibility  MomentVisibility  @default(public)
+  publishedAt DateTime?
+  expiresAt   DateTime?
+  expiredAt   DateTime?
+  deletedAt   DateTime?
+  takenDownAt DateTime?
+  sensitive   Boolean           @default(false)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  segments  MomentSegment[]
+  views     MomentView[]
+  reactions MomentReaction[]
+  shelfItems ReelShelfItem[]
+  audiences MomentAudience[]
+
+  @@index([authorId, publishedAt(sort: Desc)])
+  @@index([expiresAt, expiredAt])
+  @@map("moments")
+}
+
+model MomentSegment {
+  id         String   @id @default(cuid())
+  momentId   String
+  moment     Moment   @relation(fields: [momentId], references: [id], onDelete: Cascade)
+  mediaId    String
+  media      MediaItem @relation(fields: [mediaId], references: [id], onDelete: Restrict)
+  sortOrder  Int      @default(0)
+  /// Display duration for stills. Video uses media.durationMs, capped at 30s.
+  durationMs Int      @default(5000)
+  createdAt  DateTime @default(now())
+
+  stickers  MomentSticker[]
+  views     MomentView[]
+  reactions MomentReaction[]
+
+  @@index([momentId, sortOrder])
+  @@index([mediaId])
+  @@map("moment_segments")
+}
+
+model MomentSticker {
+  id        String            @id @default(cuid())
+  segmentId String
+  segment   MomentSegment     @relation(fields: [segmentId], references: [id], onDelete: Cascade)
+  kind      MomentStickerKind
+  x         Float
+  y         Float
+  rotation  Float             @default(0)
+  scale     Float             @default(1)
+  /// Kind-specific payload. Validated in application code.
+  payload   Json
+  createdAt DateTime          @default(now())
+
+  responses MomentStickerResponse[]
+
+  @@index([segmentId])
+  @@map("moment_stickers")
+}
+
+model MomentStickerResponse {
+  id        String        @id @default(cuid())
+  stickerId String
+  sticker   MomentSticker @relation(fields: [stickerId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  payload   Json
+  createdAt DateTime      @default(now())
+
+  @@unique([stickerId, userId])
+  @@index([userId])
+  @@map("moment_sticker_responses")
+}
+
+model MomentView {
+  id        String        @id @default(cuid())
+  momentId  String
+  moment    Moment        @relation(fields: [momentId], references: [id], onDelete: Cascade)
+  segmentId String
+  segment   MomentSegment @relation(fields: [segmentId], references: [id], onDelete: Cascade)
+  viewerId  String
+  viewer    User          @relation(fields: [viewerId], references: [id], onDelete: Cascade)
+  viewedAt  DateTime      @default(now())
+
+  @@unique([segmentId, viewerId])
+  @@index([momentId, viewedAt])
+  @@index([viewerId, viewedAt])
+  @@map("moment_views")
+}
+
+model MomentReaction {
+  id        String        @id @default(cuid())
+  momentId  String
+  moment    Moment        @relation(fields: [momentId], references: [id], onDelete: Cascade)
+  segmentId String
+  segment   MomentSegment @relation(fields: [segmentId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  emoji     String
+  createdAt DateTime      @default(now())
+
+  @@unique([segmentId, userId])
+  @@index([momentId])
+  @@map("moment_reactions")
+}
+
+model ReelShelf {
+  id           String     @id @default(cuid())
+  userId       String
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title        String
+  coverMediaId String?
+  coverMedia   MediaItem? @relation("ReelShelfCover", fields: [coverMediaId], references: [id], onDelete: SetNull)
+  sortOrder    Int        @default(0)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  items ReelShelfItem[]
+
+  @@index([userId, sortOrder])
+  @@map("reel_shelves")
+}
+
+model ReelShelfItem {
+  id        String    @id @default(cuid())
+  shelfId   String
+  shelf     ReelShelf @relation(fields: [shelfId], references: [id], onDelete: Cascade)
+  momentId  String
+  moment    Moment    @relation(fields: [momentId], references: [id], onDelete: Cascade)
+  sortOrder Int       @default(0)
+  keptAt    DateTime  @default(now())
+
+  @@unique([shelfId, momentId])
+  @@index([momentId])
+  @@map("reel_shelf_items")
+}
+
+/// Short vertical video attached 1:1 to a Post with kind=loop.
+model Loop {
+  postId          String        @id
+  post            Post          @relation(fields: [postId], references: [id], onDelete: Cascade)
+  coverFrameMs    Int           @default(0)
+  allowAudioReuse Boolean       @default(true)
+  audioTrackId    String?
+  audioTrack      AudioTrack?   @relation("LoopPlaysAudio", fields: [audioTrackId], references: [id], onDelete: SetNull)
+  captionStatus   CaptionStatus @default(pending)
+  captionError    String?
+  captionsKey     String?
+  /// LoopOverlay[] — rendered in the player, not burned in.
+  overlays        Json          @default("[]")
+  /// LoopClipRecipe[] used at compose time.
+  clips           Json          @default("[]")
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([audioTrackId])
+  @@map("loops")
+}
+
+/// Original audio extracted from a Loop. Reuse is allowed only when the creator opts in.
+/// v1 has no licensed music library.
+model AudioTrack {
+  id           String   @id @default(cuid())
+  ownerId      String
+  owner        User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  sourcePostId String?  @unique
+  sourcePost   Post?    @relation("OriginalAudioSource", fields: [sourcePostId], references: [id], onDelete: SetNull)
+  title        String   @default("Original audio")
+  allowReuse   Boolean  @default(true)
+  durationMs   Int
+  audioKey     String
+  /// number[] peak samples 0–1 for the picker waveform.
+  waveform     Json     @default("[]")
+  useCount     Int      @default(0)
+  createdAt    DateTime @default(now())
+
+  loops Loop[] @relation("LoopPlaysAudio")
+
+  @@index([ownerId, createdAt])
+  @@map("audio_tracks")
+}
+
+model WellbeingSetting {
+  userId             String    @id
+  user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// Null means no daily Loops budget.
+  loopsBudgetMinutes Int?
+  loopsBonusMinutes  Int       @default(0)
+  loopsBonusOn           DateTime? @db.Date
+  loopsDismissedOn       DateTime? @db.Date
+  /// Optional daily app-time reminder, in minutes. Null = off.
+  dailyReminderMinutes   Int?
+  /// Optional "take a break" after a long session, in minutes. Null = off.
+  sessionNudgeMinutes    Int?
+  lastBreakNudgeAt       DateTime?
+  sessionStartedAt       DateTime?
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+
+  @@map("wellbeing_settings")
+}
+
+model WatchTimeLog {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  postId    String?
+  post      Post?    @relation(fields: [postId], references: [id], onDelete: SetNull)
+  seconds   Int
+  day       DateTime @db.Date
+  createdAt DateTime @default(now())
+
+  @@index([userId, day])
+  @@index([postId])
+  @@map("watch_time_logs")
+}
+
+/// Slider weights for Discover. 0–1. Changing these changes the scoring function.
+model RankingPreference {
+  userId              String   @id
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  peopleIInteractWith Float    @default(0.5)
+  newCreators         Float    @default(0.5)
+  nearby              Float    @default(0.5)
+  lessVideo           Float    @default(0)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@map("ranking_preferences")
+}
+
+model RecentSearch {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  query     String
+  createdAt DateTime @default(now())
+
+  @@unique([userId, query])
+  @@index([userId, createdAt(sort: Desc)])
+  @@map("recent_searches")
+}
+
+/// One ranked Discover row as shown to this viewer. Signals are the ones actually used.
+model DiscoverImpression {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  score     Float
+  /// RankingSignal[]
+  signals   Json
+  /// RankingWeights used for this score
+  weights   Json
+  topic     String?
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([postId])
+  @@map("discover_impressions")
+}
+
+model SuggestedPersonDismiss {
+  userId          String
+  suggestedUserId String
+  createdAt       DateTime @default(now())
+  user            User     @relation("SuggestionViewer", fields: [userId], references: [id], onDelete: Cascade)
+  suggestedUser   User     @relation("SuggestionDismissed", fields: [suggestedUserId], references: [id], onDelete: Cascade)
+
+  @@id([userId, suggestedUserId])
+  @@map("suggested_person_dismisses")
+}
+
+/// Inbox thread. e2eVersion 0 = plaintext body. Ciphertext can replace body later without a rewrite.
+model Conversation {
+  id            String           @id @default(cuid())
+  kind          ConversationKind
+  title         String?
+  createdById   String
+  createdBy     User             @relation("ConversationCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  lastMessageAt DateTime         @default(now())
+  lastMessageId String?
+  e2eVersion    Int              @default(0)
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  members  ConversationMember[]
+  messages Message[]
+  request  MessageRequest?
+  pair     ConversationPair?
+
+  @@index([lastMessageAt(sort: Desc), id(sort: Desc)])
+  @@index([createdById])
+  @@map("conversations")
+}
+
+/// Unique 1:1 lookup. userLowId is the lexicographically smaller user id.
+model ConversationPair {
+  conversationId String       @id
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  userLowId      String
+  userHighId     String
+
+  @@unique([userLowId, userHighId])
+  @@map("conversation_pairs")
+}
+
+model ConversationMember {
+  conversationId         String
+  userId                 String
+  role                   ConversationMemberRole @default(member)
+  joinedAt               DateTime               @default(now())
+  leftAt                 DateTime?
+  lastReadMessageId      String?
+  lastDeliveredMessageId String?
+  muted                  Boolean                @default(false)
+  hidden                 Boolean                @default(false)
+  conversation           Conversation           @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user                   User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([conversationId, userId])
+  @@index([userId, hidden, leftAt])
+  @@map("conversation_members")
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderId       String
+  sender         User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  kind           MessageKind
+  /// Plaintext v1. Empty when unsent, or when bodyEncoding is ciphertext.
+  body           String       @default("")
+  /// Reserved for future E2E. Null in v1.
+  ciphertext     String?
+  bodyEncoding   BodyEncoding @default(plaintext)
+  /// { mediaId?, postId?, loopId?, momentId?, durationMs? }
+  payload        Json         @default("{}")
+  replyToId      String?
+  replyTo        Message?     @relation("MessageReply", fields: [replyToId], references: [id], onDelete: SetNull)
+  replies        Message[]    @relation("MessageReply")
+  editedAt       DateTime?
+  deletedAt      DateTime?
+  clientId       String?
+  createdAt      DateTime     @default(now())
+  reactions      MessageReaction[]
+  attachments    MessageAttachment[]
+
+  @@unique([conversationId, clientId])
+  @@index([conversationId, createdAt(sort: Desc), id(sort: Desc)])
+  @@index([senderId])
+  @@map("messages")
+}
+
+model MessageAttachment {
+  id        String    @id @default(cuid())
+  messageId String
+  message   Message   @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  mediaId   String
+  media     MediaItem @relation(fields: [mediaId], references: [id], onDelete: Restrict)
+  createdAt DateTime  @default(now())
+
+  @@index([messageId])
+  @@index([mediaId])
+  @@map("message_attachments")
+}
+
+model MessageReaction {
+  messageId String
+  userId    String
+  emoji     String
+  createdAt DateTime @default(now())
+  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([messageId, userId])
+  @@index([userId])
+  @@map("message_reactions")
+}
+
+model MessageRequest {
+  id             String                @id @default(cuid())
+  conversationId String                @unique
+  conversation   Conversation          @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  fromUserId     String
+  toUserId       String
+  status         MessageRequestStatus  @default(pending)
+  createdAt      DateTime              @default(now())
+  respondedAt    DateTime?
+  from           User                  @relation("RequestFrom", fields: [fromUserId], references: [id], onDelete: Cascade)
+  to             User                  @relation("RequestTo", fields: [toUserId], references: [id], onDelete: Cascade)
+
+  @@index([toUserId, status, createdAt])
+  @@index([fromUserId])
+  @@map("message_requests")
+}
+
+/// One activity row per recipient + aggregateKey. New actors reopen an unread tile.
+model Notification {
+  id           String           @id @default(cuid())
+  recipientId  String
+  recipient    User             @relation(fields: [recipientId], references: [id], onDelete: Cascade)
+  kind         NotificationKind
+  aggregateKey String
+  /// Most recent actor user ids, newest first, capped at 3.
+  actorIds     Json             @default("[]")
+  actorCount   Int              @default(1)
+  targetType   String?
+  targetId     String?
+  preview      String?
+  href         String?
+  /// Kind-specific payload (securityKind, postId, commentId, momentId, …).
+  payload      Json             @default("{}")
+  readAt       DateTime?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  @@unique([recipientId, aggregateKey])
+  @@index([recipientId, updatedAt(sort: Desc), id(sort: Desc)])
+  @@index([recipientId, readAt])
+  @@map("notifications")
+}
+
+model NotificationPreference {
+  userId                   String   @id
+  user                     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// NotificationChannelMap
+  channels                 Json     @default("{}")
+  quietHoursEnabled        Boolean  @default(false)
+  quietHoursStartMinutes   Int      @default(1320)
+  quietHoursEndMinutes     Int      @default(420)
+  timezone                 String   @default("UTC")
+  emailDigest              Boolean  @default(false)
+  lastDigestAt             DateTime?
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+
+  @@map("notification_preferences")
+}
+
+model Device {
+  id         String         @id @default(cuid())
+  userId     String
+  user       User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  platform   DevicePlatform
+  /// Expo push token, or web push endpoint URL.
+  token      String
+  /// Web Push { p256dh, auth }.
+  keys       Json?
+  userAgent  String?
+  lastSeenAt DateTime       @default(now())
+  createdAt  DateTime       @default(now())
+
+  @@unique([userId, token])
+  @@index([userId])
+  @@map("devices")
+}
+
+/// Named audience. Membership is private to the owner — members do not see they were added.
+model Circle {
+  id        String   @id @default(cuid())
+  ownerId   String
+  owner     User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  members         CircleMember[]
+  postAudiences   PostAudience[]
+  momentAudiences MomentAudience[]
+
+  @@unique([ownerId, name])
+  @@index([ownerId])
+  @@map("circles")
+}
+
+model CircleMember {
+  circleId  String
+  userId    String
+  createdAt DateTime @default(now())
+  circle    Circle   @relation(fields: [circleId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([circleId, userId])
+  @@index([userId])
+  @@map("circle_members")
+}
+
+model PostAudience {
+  postId   String
+  circleId String
+  post     Post   @relation(fields: [postId], references: [id], onDelete: Cascade)
+  circle   Circle @relation(fields: [circleId], references: [id], onDelete: Cascade)
+
+  @@id([postId, circleId])
+  @@index([circleId])
+  @@map("post_audiences")
+}
+
+model MomentAudience {
+  momentId String
+  circleId String
+  moment   Moment @relation(fields: [momentId], references: [id], onDelete: Cascade)
+  circle   Circle @relation(fields: [circleId], references: [id], onDelete: Cascade)
+
+  @@id([momentId, circleId])
+  @@index([circleId])
+  @@map("moment_audiences")
+}
+
+model Board {
+  id          String          @id @default(cuid())
+  ownerId     String
+  owner       User            @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  title       String
+  description String          @default("")
+  visibility  BoardVisibility @default(private)
+  /// Default "Saved" board. Application code keeps one per owner.
+  isDefault   Boolean         @default(false)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  collaborators BoardCollaborator[]
+  items         BoardItem[]
+  follows       BoardFollow[]
+
+  @@index([ownerId, updatedAt(sort: Desc)])
+  @@index([visibility, title])
+  @@map("boards")
+}
+
+model BoardCollaborator {
+  boardId    String
+  userId     String
+  invitedAt  DateTime  @default(now())
+  acceptedAt DateTime?
+  board      Board     @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([boardId, userId])
+  @@index([userId])
+  @@map("board_collaborators")
+}
+
+model BoardItem {
+  id        String   @id @default(cuid())
+  boardId   String
+  board     Board    @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  addedById String
+  addedBy   User     @relation(fields: [addedById], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([boardId, postId])
+  @@index([postId])
+  @@index([boardId, createdAt(sort: Desc)])
+  @@map("board_items")
+}
+
+model BoardFollow {
+  boardId   String
+  userId    String
+  createdAt DateTime @default(now())
+  board     Board    @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([boardId, userId])
+  @@index([userId])
+  @@map("board_follows")
+}
+
+/// Device-synced create payload. Publish still goes through Post/Moment/Loop create.
+model Draft {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind      DraftKind
+  /// CreatePost / CreateLoop / CreateMoment input, stored as JSON.
+  payload   Json      @default("{}")
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([userId, updatedAt(sort: Desc)])
+  @@map("drafts")
+}
+
+model Report {
+  id           String           @id @default(cuid())
+  reporterId   String
+  reporter     User             @relation("Reporter", fields: [reporterId], references: [id], onDelete: Cascade)
+  targetKind   ReportTargetKind
+  targetId     String
+  /// Account reports also store the reported user id for lookup.
+  reportedUserId String?
+  reportedUser User?            @relation("ReportedUser", fields: [reportedUserId], references: [id], onDelete: SetNull)
+  reason       ReportReason
+  details      String           @default("")
+  status       ReportStatus     @default(open)
+  caseId       String?
+  case         ModerationCase?  @relation(fields: [caseId], references: [id], onDelete: SetNull)
+  createdAt    DateTime         @default(now())
+
+  @@index([reporterId, createdAt(sort: Desc)])
+  @@index([targetKind, targetId])
+  @@index([caseId])
+  @@index([status, createdAt])
+  @@map("reports")
+}
+
+model ModerationCase {
+  id          String                 @id @default(cuid())
+  status      ModerationCaseStatus   @default(open)
+  source      ModerationCaseSource
+  targetKind  ReportTargetKind
+  targetId    String
+  subjectUserId String?
+  subject     User?                  @relation("CaseSubject", fields: [subjectUserId], references: [id], onDelete: SetNull)
+  summary     String                 @default("")
+  assignedToAdminId String?
+  assignedTo  AdminUser?             @relation("CaseAssignee", fields: [assignedToAdminId], references: [id], onDelete: SetNull)
+  createdAt   DateTime               @default(now())
+  updatedAt   DateTime               @updatedAt
+  resolvedAt  DateTime?
+
+  reports     Report[]
+  actions     ModerationAction[]
+  appeals     Appeal[]
+  classifications MediaClassification[]
+
+  @@index([status, createdAt(sort: Desc)])
+  @@index([targetKind, targetId])
+  @@index([subjectUserId])
+  @@index([assignedToAdminId])
+  @@map("moderation_cases")
+}
+
+model ModerationAction {
+  id        String                @id @default(cuid())
+  caseId    String
+  case      ModerationCase        @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  kind      ModerationActionKind
+  note      String                @default("")
+  adminId   String?
+  admin     AdminUser?            @relation(fields: [adminId], references: [id], onDelete: SetNull)
+  createdAt DateTime              @default(now())
+
+  @@index([caseId, createdAt])
+  @@map("moderation_actions")
+}
+
+model Appeal {
+  id        String       @id @default(cuid())
+  caseId    String
+  case      ModerationCase @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  statement String
+  status    AppealStatus @default(pending)
+  decision  String       @default("")
+  createdAt DateTime     @default(now())
+  resolvedAt DateTime?
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([status, createdAt])
+  @@index([caseId])
+  @@map("appeals")
+}
+
+/// Staff accounts for apps/admin. Separate from public User sessions.
+model AdminUser {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  passwordHash String
+  displayName  String
+  role         AdminRole @default(moderator)
+  disabledAt   DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  sessions AdminSession[]
+  actions  ModerationAction[]
+  cases    ModerationCase[]   @relation("CaseAssignee")
+  auditLogs AuditLog[]
+
+  @@map("admin_users")
+}
+
+model AdminSession {
+  id               String    @id @default(cuid())
+  adminId          String
+  admin            AdminUser @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  refreshTokenHash String    @unique
+  familyId         String
+  userAgent        String?
+  ip               String?
+  lastUsedAt       DateTime  @default(now())
+  expiresAt        DateTime
+  revokedAt        DateTime?
+  createdAt        DateTime  @default(now())
+
+  @@index([adminId, revokedAt])
+  @@index([familyId])
+  @@map("admin_sessions")
+}
+
+model AuditLog {
+  id          String    @id @default(cuid())
+  adminId     String
+  admin       AdminUser @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  action      String
+  targetKind  String
+  targetId    String
+  subjectUserId String?
+  subject     User?     @relation("AuditSubjectUser", fields: [subjectUserId], references: [id], onDelete: SetNull)
+  payload     Json      @default("{}")
+  createdAt   DateTime  @default(now())
+
+  @@index([createdAt(sort: Desc), id(sort: Desc)])
+  @@index([adminId, createdAt(sort: Desc)])
+  @@index([targetKind, targetId])
+  @@map("audit_logs")
+}
+
+model KeywordFilter {
+  id        String              @id @default(cuid())
+  keyword   String              @unique
+  action    KeywordFilterAction @default(queue)
+  createdAt DateTime            @default(now())
+
+  @@map("keyword_filters")
+}
+
+/// One classification pass per media item. Stub always writes unknown + labelled provider.
+model MediaClassification {
+  id          String              @id @default(cuid())
+  mediaId     String
+  media       MediaItem           @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+  provider    String
+  labelledStub Boolean            @default(false)
+  nudity      ClassificationLabel @default(unknown)
+  violence    ClassificationLabel @default(unknown)
+  note        String              @default("")
+  caseId      String?
+  case        ModerationCase?     @relation(fields: [caseId], references: [id], onDelete: SetNull)
+  createdAt   DateTime            @default(now())
+
+  @@index([mediaId, createdAt(sort: Desc)])
+  @@map("media_classifications")
+}
+
+model ExportJob {
+  id           String          @id @default(cuid())
+  userId       String
+  user         User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status       ExportJobStatus @default(pending)
+  error        String?
+  archiveKey   String?
+  byteSize     Int?
+  emailSent    Boolean         @default(false)
+  createdAt    DateTime        @default(now())
+  startedAt    DateTime?
+  finishedAt   DateTime?
+  expiresAt    DateTime?
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([status, createdAt])
+  @@map("export_jobs")
+}
+
+model DeletionRequest {
+  id          String                 @id @default(cuid())
+  userId      String
+  user        User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status      DeletionRequestStatus  @default(pending)
+  requestedAt DateTime               @default(now())
+  executeAt   DateTime
+  cancelledAt DateTime?
+  completedAt DateTime?
+
+  @@index([status, executeAt])
+  @@index([userId, status])
+  @@map("deletion_requests")
+}
+
+model AppTimeLog {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  seconds   Int
+  day       DateTime @db.Date
+  createdAt DateTime @default(now())
+
+  @@index([userId, day])
+  @@map("app_time_logs")
+}

@@ -1,0 +1,37 @@
+{
+  "name": "tessera",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Tessera — a photo and video social platform",
+  "packageManager": "pnpm@9.15.9",
+  "engines": {
+    "node": ">=22.12.0 <23",
+    "pnpm": ">=9.15.0"
+  },
+  "scripts": {
+    "dev": "turbo dev --filter=@tessera/web --filter=@tessera/api --filter=@tessera/worker --filter=@tessera/admin",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "typecheck": "turbo typecheck",
+    "test": "turbo test",
+    "e2e": "turbo e2e --filter=@tessera/web",
+    "compose:up": "docker compose up -d",
+    "compose:down": "docker compose down",
+    "db:generate": "pnpm --filter @tessera/db generate",
+    "db:migrate": "pnpm --filter @tessera/db migrate",
+    "db:deploy": "pnpm --filter @tessera/db migrate:deploy",
+    "seed": "tsx scripts/seed.ts",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "@tessera/db": "workspace:*",
+    "@tessera/media": "workspace:*",
+    "argon2": "^0.44.0",
+    "dotenv": "^16.6.1",
+    "prettier": "^3.6.2",
+    "tsx": "^4.20.5",
+    "turbo": "^2.5.6",
+    "typescript": "catalog:"
+  }
+}

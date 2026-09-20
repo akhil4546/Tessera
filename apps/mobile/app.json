@@ -1,0 +1,32 @@
+{
+  "expo": {
+    "name": "Tessera",
+    "slug": "tessera",
+    "scheme": "tessera",
+    "version": "0.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#F4EDE3"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "app.tessera.mobile"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#F4EDE3"
+      },
+      "package": "app.tessera.mobile"
+    },
+    "plugins": ["expo-router", "expo-secure-store", "expo-image-picker"],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

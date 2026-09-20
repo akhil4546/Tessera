@@ -1,0 +1,41 @@
+{
+  "name": "@tessera/media",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./filters": {
+      "types": "./src/filters.ts",
+      "default": "./src/filters.ts"
+    },
+    "./adjustments": {
+      "types": "./src/adjustments.ts",
+      "default": "./src/adjustments.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json --noEmit",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "lint": "echo \"lint: @tessera/media\""
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.901.0",
+    "@aws-sdk/s3-request-presigner": "^3.901.0",
+    "@tessera/db": "workspace:*",
+    "@tessera/types": "workspace:*",
+    "blurhash": "^2.0.5",
+    "sharp": "^0.34.4",
+    "web-push": "^3.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "@types/web-push": "^3.6.4",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

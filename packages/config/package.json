@@ -1,0 +1,14 @@
+{
+  "name": "@tessera/config",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "lint": "echo \"lint: @tessera/config\"",
+    "test": "echo \"no tests in @tessera/config\"",
+    "typecheck": "echo \"no ts sources in @tessera/config\"",
+    "build": "echo \"@tessera/config is JSON only\""
+  },
+  "files": [
+    "tsconfig"
+  ]
+}

@@ -1,0 +1,39 @@
+{
+  "name": "@tessera/web",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --port 3000",
+    "build": "next build",
+    "start": "next start --port 3000",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "echo \"web unit tests live in packages/ui; e2e via pnpm e2e\"",
+    "e2e": "playwright test",
+    "lint": "echo \"lint: @tessera/web\""
+  },
+  "dependencies": {
+    "@tanstack/react-query": "^5.87.4",
+    "@tessera/api-client": "workspace:*",
+    "@tessera/i18n": "workspace:*",
+    "@tessera/media": "workspace:*",
+    "@tessera/tokens": "workspace:*",
+    "@tessera/types": "workspace:*",
+    "@tessera/ui": "workspace:*",
+    "@tessera/validation": "workspace:*",
+    "hls.js": "^1.6.13",
+    "next": "^16.3.5",
+    "next-intl": "^4.3.7",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "socket.io-client": "^4.8.3"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.55.0",
+    "@tailwindcss/postcss": "^4.1.13",
+    "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "tailwindcss": "^4.1.13",
+    "typescript": "catalog:"
+  }
+}
