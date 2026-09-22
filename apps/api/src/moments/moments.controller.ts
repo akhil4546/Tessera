@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Headers, Param, Patch, Post, Put, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Put, UseGuards } from '@nestjs/common';
 import { ApiCookieAuth, ApiTags } from '@nestjs/swagger';
 import {
   createMomentSchema,
@@ -29,9 +29,8 @@ export class MomentsController {
   create(
     @CurrentUser() user: RequestUser,
     @Body(new ZodPipe(createMomentSchema)) body: ReturnType<typeof createMomentSchema.parse>,
-    @Headers('idempotency-key') idempotencyKey?: string,
   ) {
-    return this.moments.create(user.id, body, idempotencyKey);
+    return this.moments.create(user.id, body);
   }
 
   @Get('moments/tray')

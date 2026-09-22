@@ -69,6 +69,8 @@ erDiagram
 
 **Phase 2 tables:** `Post`, `MediaItem`, `Hashtag`, `PostHashtag`, `PeopleTag`, `HeroTile`, `Appreciation`, `Comment`, `CommentLike`, `CommentFilter`, `FeedEntry`, `FeedState`, `IdempotencyRecord`.
 
+`IdempotencyRecord` is unique on `(userId, key, route)`. A finished row lives for 24 hours. Status `0` is an in-progress lock and is deleted after 2 minutes if the request never stores a response. The hourly `purge-idempotency` job on `tessera-safety` does both. No extra expiry column.
+
 **Phase 3 tables:** `Moment`, `MomentSegment`, `MomentSticker`, `MomentStickerResponse`, `MomentView`, `MomentReaction`, `ReelShelf`, `ReelShelfItem`. `MediaPurpose` gains `moment`. Profiles gain `momentArchiveEnabled`.
 
 **Phase 4 tables:** `Loop`, `AudioTrack`, `WellbeingSetting`, `WatchTimeLog`. `MediaPurpose` gains `loop`. `Post.kind=loop` is the public Loop.

@@ -10,6 +10,7 @@ import {
   JOB_PROCESS_MEDIA,
   JOB_EXPORT_ACCOUNT,
   JOB_HARD_DELETE,
+  JOB_PURGE_IDEMPOTENCY,
   JOB_PUBLISH_SCHEDULED,
   JOB_RETRACT_POST,
   QUEUE_FEED,
@@ -24,6 +25,7 @@ import {
   expireMoments,
   fanoutPost,
   hardDeleteDueAccounts,
+  purgeIdempotencyRecords,
   runExportJob,
   processLoop,
   processMediaItem,
@@ -38,6 +40,7 @@ import {
   type ProcessLoopJob,
   type ExportAccountJob,
   type HardDeleteJob,
+  type PurgeIdempotencyJob,
   type ProcessMediaJob,
   type PublishScheduledJob,
   type RetractPostJob,
@@ -103,7 +106,12 @@ export function startWorkers(): { close: () => Promise<void> } {
   });
   const from = process.env.SMTP_FROM ?? 'Tessera <noreply@localhost>';
   const web = process.env.WEB_ORIGIN ?? 'http://localhost:3000';
-  async function sendMail(options: { to: string; subject: string; text: string; html: string }): Promise<boolean> {
+  async function sendMail(options: {
+    to: string;
+    subject: string;
+    text: string;
+    html: string;
+  }): Promise<boolean> {
     try {
       await mailer.sendMail({ from, ...options });
       return true;
@@ -227,6 +235,12 @@ export function startWorkers(): { close: () => Promise<void> } {
         const result = await hardDeleteDueAccounts(prisma, storage, now, log);
         logger.info(result, 'Hard-delete job finished');
       }
+      if (job.name === JOB_PURGE_IDEMPOTENCY) {
+        const data = job.data as PurgeIdempotencyJob;
+        const now = data.now ? new Date(data.now) : new Date();
+        const result = await purgeIdempotencyRecords(prisma, now);
+        logger.info(result, 'Idempotency purge finished');
+      }
     },
     { connection, concurrency: 1 },
   );
@@ -245,7 +259,9 @@ export function startWorkers(): { close: () => Promise<void> } {
   feed.on('failed', (job, err) => logger.error({ err, id: job?.id }, 'feed job failed'));
   moments.on('failed', (job, err) => logger.error({ err, id: job?.id }, 'moments job failed'));
   loops.on('failed', (job, err) => logger.error({ err, id: job?.id }, 'loops job failed'));
-  notifications.on('failed', (job, err) => logger.error({ err, id: job?.id }, 'notifications job failed'));
+  notifications.on('failed', (job, err) =>
+    logger.error({ err, id: job?.id }, 'notifications job failed'),
+  );
   scheduled.on('failed', (job, err) => logger.error({ err, id: job?.id }, 'scheduled job failed'));
   safety.on('failed', (job, err) => logger.error({ err, id: job?.id }, 'safety job failed'));
   logger.info(

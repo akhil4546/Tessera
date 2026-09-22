@@ -3,7 +3,6 @@ import {
   Controller,
   Delete,
   Get,
-  Headers,
   Param,
   Patch,
   Post,
@@ -45,9 +44,8 @@ export class PostsController {
   create(
     @CurrentUser() user: RequestUser,
     @Body(new ZodPipe(createPostSchema)) body: ReturnType<typeof createPostSchema.parse>,
-    @Headers('idempotency-key') idempotencyKey?: string,
   ) {
-    return this.posts.create(user.id, body, idempotencyKey);
+    return this.posts.create(user.id, body);
   }
 
   @Get('posts/:id')
@@ -99,7 +97,8 @@ export class PostsController {
   @UseGuards(OptionalAuthGuard)
   commentsList(
     @Param('id') id: string,
-    @Query(new ZodPipe(paginationQuerySchema)) query: ReturnType<typeof paginationQuerySchema.parse>,
+    @Query(new ZodPipe(paginationQuerySchema))
+    query: ReturnType<typeof paginationQuerySchema.parse>,
     @OptionalUser() viewer?: RequestUser,
   ) {
     return this.comments.list(id, viewer?.id, query.cursor, query.limit);

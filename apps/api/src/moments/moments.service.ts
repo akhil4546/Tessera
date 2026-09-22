@@ -70,18 +70,11 @@ export class MomentsService {
     private readonly notifications: NotificationsService,
   ) {}
 
-  async create(userId: string, input: CreateMomentInput, idempotencyKey?: string): Promise<MomentCard> {
+  async create(userId: string, input: CreateMomentInput): Promise<MomentCard> {
     const audience = resolveContentAudience(input);
     const circleIds =
       audience.visibility === 'circles' ? await assertOwnedCircleIds(this.prisma, userId, audience.circleIds) : [];
     await this.rateLimit.consume(`moment:${userId}`, 30, 60 * 60);
-
-    if (idempotencyKey) {
-      const existing = await this.prisma.idempotencyRecord.findUnique({
-        where: { userId_key_route: { userId, key: idempotencyKey, route: 'POST /v1/moments' } },
-      });
-      if (existing) return this.get(String(existing.body), userId);
-    }
 
     const profile = await this.prisma.profile.findUnique({ where: { userId } });
     if (!profile) throw new TesseraHttpError(401, 'UNAUTHENTICATED', 'Sign in to continue.');
@@ -160,18 +153,6 @@ export class MomentsService {
     });
 
     await this.publishIfReady(moment.id);
-
-    if (idempotencyKey) {
-      await this.prisma.idempotencyRecord.create({
-        data: {
-          userId,
-          key: idempotencyKey,
-          route: 'POST /v1/moments',
-          status: 201,
-          body: moment.id,
-        },
-      });
-    }
 
     return this.get(moment.id, userId);
   }

@@ -20,6 +20,7 @@ export const JOB_NOTIFICATION_DIGEST = 'notification-digest';
 export const JOB_PUBLISH_SCHEDULED = 'publish-scheduled';
 export const JOB_EXPORT_ACCOUNT = 'export-account';
 export const JOB_HARD_DELETE = 'hard-delete';
+export const JOB_PURGE_IDEMPOTENCY = 'purge-idempotency';
 
 export { FEED_FANOUT_FOLLOWER_THRESHOLD };
 
@@ -35,3 +36,4 @@ export type NotificationDigestJob = { now?: string };
 export type PublishScheduledJob = { now?: string };
 export type ExportAccountJob = { jobId: string };
 export type HardDeleteJob = { now?: string };
+export type PurgeIdempotencyJob = { now?: string };

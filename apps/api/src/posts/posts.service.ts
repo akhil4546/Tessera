@@ -60,21 +60,12 @@ export class PostsService {
     private readonly notifications: NotificationsService,
   ) {}
 
-  async create(userId: string, input: CreatePostInput, idempotencyKey?: string): Promise<PostCard> {
+  async create(userId: string, input: CreatePostInput): Promise<PostCard> {
     const audience = resolveContentAudience(input);
     const circleIds =
       audience.visibility === 'circles' ? await assertOwnedCircleIds(this.prisma, userId, audience.circleIds) : [];
     const scheduledAt = parseFutureSchedule(input.scheduledAt);
     await this.rateLimit.consume(`post:${userId}`, 20, 60 * 60);
-
-    if (idempotencyKey) {
-      const existing = await this.prisma.idempotencyRecord.findUnique({
-        where: { userId_key_route: { userId, key: idempotencyKey, route: 'POST /v1/posts' } },
-      });
-      if (existing) {
-        return this.get(existing.body as unknown as string, userId);
-      }
-    }
 
     const edits = input.media.map((item) => ({
       filterId: item.filterId,
@@ -178,18 +169,6 @@ export class PostsService {
     }
 
     await this.publishIfReady(post.id);
-
-    if (idempotencyKey) {
-      await this.prisma.idempotencyRecord.create({
-        data: {
-          userId,
-          key: idempotencyKey,
-          route: 'POST /v1/posts',
-          status: 201,
-          body: post.id,
-        },
-      });
-    }
 
     return this.get(post.id, userId);
   }

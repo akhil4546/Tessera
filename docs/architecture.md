@@ -63,7 +63,7 @@ flowchart LR
 | Web | 3000 | Auth, Following feed + Moment tray, Loops player, Discover, create Post/Moment/Loop |
 | API | 3001 | `/health`, identity, media, posts, feed, Moments, Loops, search, Discover, Inbox REST + `/v1/inbox` sockets, notifications, OpenAPI `/docs` |
 | Admin | 3002 | Staff app. Separate `tessera_admin_*` cookies. Queue, lookup, takedown, suspend, appeals, audit |
-| Worker | (no HTTP) | `tessera-media` (classifier stub before publish) + feed + Moments + Loops + notifications + scheduled + `tessera-safety` (export, hard-delete) |
+| Worker | (no HTTP) | `tessera-media` (classifier stub before publish) + feed + Moments + Loops + notifications + scheduled + `tessera-safety` (export, hard-delete, hourly idempotency purge) |
 | Expo | 8081 | Tabs + login/signup + feed/create/Me mosaic |
 | Postgres | 5432 | Identity, graph, posts |
 | Redis | 6379 | Rate limits + BullMQ (in-memory / inline fallback if down) |

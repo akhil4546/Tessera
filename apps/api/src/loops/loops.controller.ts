@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Headers, Param, Patch, Post, Put, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Put, Query, UseGuards } from '@nestjs/common';
 import { ApiCookieAuth, ApiTags } from '@nestjs/swagger';
 import {
   audioQuerySchema,
@@ -24,9 +24,8 @@ export class LoopsController {
   create(
     @CurrentUser() user: RequestUser,
     @Body(new ZodPipe(createLoopSchema)) body: ReturnType<typeof createLoopSchema.parse>,
-    @Headers('idempotency-key') idempotencyKey?: string,
   ) {
-    return this.loops.create(user.id, body, idempotencyKey);
+    return this.loops.create(user.id, body);
   }
 
   @Get('loops/feed')
@@ -99,5 +98,4 @@ export class LoopsController {
   ) {
     return this.loops.watch(user.id, id, body.seconds);
   }
-
 }

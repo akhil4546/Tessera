@@ -36,19 +36,12 @@ export class LoopsService {
     private readonly rateLimit: RateLimitService,
   ) {}
 
-  async create(userId: string, input: CreateLoopInput, idempotencyKey?: string): Promise<PostCard> {
+  async create(userId: string, input: CreateLoopInput): Promise<PostCard> {
     const audience = resolveContentAudience(input);
     const circleIds =
       audience.visibility === 'circles' ? await assertOwnedCircleIds(this.prisma, userId, audience.circleIds) : [];
     const scheduledAt = parseFutureSchedule(input.scheduledAt);
     await this.rateLimit.consume(`loop:${userId}`, 20, 60 * 60);
-
-    if (idempotencyKey) {
-      const existing = await this.prisma.idempotencyRecord.findUnique({
-        where: { userId_key_route: { userId, key: idempotencyKey, route: 'POST /v1/loops' } },
-      });
-      if (existing) return this.get(String(existing.body), userId);
-    }
 
     const ids = input.clips.map((clip) => clip.mediaId);
     if (new Set(ids).size !== ids.length) {
@@ -139,18 +132,6 @@ export class LoopsService {
     });
 
     await this.queues.processLoop(post.id);
-
-    if (idempotencyKey) {
-      await this.prisma.idempotencyRecord.create({
-        data: {
-          userId,
-          key: idempotencyKey,
-          route: 'POST /v1/loops',
-          status: 201,
-          body: post.id,
-        },
-      });
-    }
 
     return this.get(post.id, userId);
   }

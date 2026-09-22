@@ -10,6 +10,16 @@ Web uses httpOnly cookies (`tessera_at`, `tessera_rt`) with `credentials: 'inclu
 
 OpenAPI: `/docs`.
 
+## Idempotency
+
+Signed-in non-GET routes accept an optional `Idempotency-Key` header (one line, at most 255 characters). The same user, key, and path replays the first successful response for 24 hours and does not run the handler again. Replay returns that original body, including any signed media URLs from that moment — fetch the resource again if you need fresh URLs.
+
+A different body with the same key is **409 `IDEMPOTENCY_MISMATCH`**. A key whose first request is still running is **409 `IDEMPOTENCY_IN_PROGRESS`**. Keys stored by the older post/Moment/Loop path (a bare resource id) are **409 `IDEMPOTENCY_KEY_REUSED`** rather than creating a second resource. Failed requests are not stored, so the same key can be retried after a 4xx. GET, HEAD, and OPTIONS ignore the header.
+
+The key is ignored when nobody is signed in (`/v1/auth/*`) and on admin routes. Admin actions are not user-scoped, and `IdempotencyRecord.userId` references `User`. Messages stay idempotent on `clientId` as well.
+
+`tessera-safety` runs `purge-idempotency` every hour. It deletes finished rows older than 24 hours and locks left in progress (status 0) after 2 minutes. If Redis is down, the API process runs the same purge on that interval.
+
 ## Auth
 
 Unchanged from Phase 1 (`/v1/auth/*`, `/v1/me`, sessions, 2FA, OAuth 501 until configured).
@@ -35,7 +45,7 @@ Unchanged from Phase 1. `GET /v1/users/:handle` now includes `counts.posts` and 
 
 | Method | Path |
 | --- | --- |
-| POST | `/v1/posts` | Idempotency-Key optional |
+| POST | `/v1/posts` | Optional `Idempotency-Key`, same as other signed-in creates |
 | GET/PATCH/DELETE | `/v1/posts/:id` |
 | POST | `/v1/posts/:id/archive` |
 | POST/DELETE | `/v1/posts/:id/appreciations` |
@@ -66,7 +76,7 @@ Response includes `finishLine: { reached, seenSinceLastVisit, olderAvailable }`.
 
 | Method | Path | Notes |
 | --- | --- | --- |
-| POST | `/v1/moments` | Idempotency-Key optional. Circles via `circleIds` |
+| POST | `/v1/moments` | Optional `Idempotency-Key`. Circles via `circleIds` |
 | GET | `/v1/moments/tray` | Own ring first, unseen, then recency + interaction |
 | GET | `/v1/moments/authors/:handle` | Live segments for the viewer |
 | GET/DELETE | `/v1/moments/:id` | |
@@ -89,7 +99,7 @@ Link stickers: **403 `LINK_NOT_ELIGIBLE`** on Personal accounts. Video segments 
 
 | Method | Path | Notes |
 | --- | --- | --- |
-| POST | `/v1/loops` | Idempotency-Key optional. Circles via `circleIds`; `scheduledAt` held until due |
+| POST | `/v1/loops` | Optional `Idempotency-Key`. Circles via `circleIds`; `scheduledAt` held until due |
 | GET | `/v1/loops/feed` | Following + self, reverse-chronological, includes wellbeing |
 | GET/PATCH | `/v1/loops/:id` | PATCH: `allowAudioReuse`, `coverFrameMs` |
 | POST | `/v1/loops/:id/watch` | `{ seconds }` heartbeat 1–30 |
@@ -169,7 +179,7 @@ WebSocket namespace: `/v1/inbox` (cookie or `auth.token`). Events are a single `
 | GET/PATCH | `/v1/inbox/conversations/:id` | mute, hide, rename group |
 | POST/DELETE | `/v1/inbox/conversations/:id/members` | Group owner |
 | POST | `/v1/inbox/conversations/:id/leave` | |
-| GET/POST | `/v1/inbox/conversations/:id/messages` | Cursor pagination. `clientId` is idempotent |
+| GET/POST | `/v1/inbox/conversations/:id/messages` | Cursor pagination. `clientId` is idempotent, and `Idempotency-Key` replays the whole response |
 | PATCH/DELETE | `/v1/inbox/messages/:id` | Edit 15 minutes (text). Unsend anytime |
 | POST/DELETE | `/v1/inbox/messages/:id/reactions` | Tessera quick emojis |
 | POST | `/v1/inbox/conversations/:id/read` | `{ messageId }` |

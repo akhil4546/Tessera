@@ -10,6 +10,7 @@ import {
   JOB_PROCESS_MEDIA,
   JOB_EXPORT_ACCOUNT,
   JOB_HARD_DELETE,
+  JOB_PURGE_IDEMPOTENCY,
   JOB_PUBLISH_SCHEDULED,
   JOB_RETRACT_POST,
   QUEUE_FEED,
@@ -22,6 +23,7 @@ import {
   expireMoments,
   fanoutPost,
   hardDeleteDueAccounts,
+  purgeIdempotencyRecords,
   runExportJob,
   processLoop,
   processMediaItem,
@@ -34,6 +36,7 @@ import {
   type ProcessLoopJob,
   type ExportAccountJob,
   type HardDeleteJob,
+  type PurgeIdempotencyJob,
   type ProcessMediaJob,
   type PublishScheduledJob,
   type RetractPostJob,
@@ -62,6 +65,7 @@ export class QueueService implements OnModuleInit, OnModuleDestroy {
   private inlineDigest: ReturnType<typeof setInterval> | null = null;
   private inlineScheduled: ReturnType<typeof setInterval> | null = null;
   private inlineHardDelete: ReturnType<typeof setInterval> | null = null;
+  private inlineIdempotencyPurge: ReturnType<typeof setInterval> | null = null;
   private deliverFn: ((id: string) => Promise<void>) | null = null;
   private digestFn: ((now?: Date) => Promise<unknown>) | null = null;
 
@@ -84,6 +88,7 @@ export class QueueService implements OnModuleInit, OnModuleDestroy {
     await this.scheduleNotificationDigest();
     await this.scheduleScheduledPublish();
     await this.scheduleHardDelete();
+    await this.scheduleIdempotencyPurge();
   }
 
   private connection(): Redis | null {
@@ -358,6 +363,29 @@ export class QueueService implements OnModuleInit, OnModuleDestroy {
     this.inlineHardDelete.unref();
   }
 
+  private async scheduleIdempotencyPurge(): Promise<void> {
+    if (process.env.NODE_ENV === 'test') {
+      this.log.log('INLINE_PROCESS: idempotency purge runs from tests, not a Redis repeatable job.');
+      return;
+    }
+    const queued = await this.queues();
+    if (queued) {
+      await queued.safety.add(JOB_PURGE_IDEMPOTENCY, {} satisfies PurgeIdempotencyJob, {
+        repeat: { every: 60 * 60 * 1000 },
+        removeOnComplete: 20,
+      });
+      this.log.log('Scheduled tessera-safety idempotency purge every 60m.');
+      return;
+    }
+    this.log.warn('SOFT-FAIL: Redis down — idempotency purge runs inline every 60m in the API process.');
+    this.inlineIdempotencyPurge = setInterval(() => {
+      void purgeIdempotencyRecords(this.prisma).catch((err) =>
+        this.log.warn(`INLINE_PROCESS: idempotency purge failed (${err instanceof Error ? err.message : 'error'})`),
+      );
+    }, 60 * 60 * 1000);
+    this.inlineIdempotencyPurge.unref();
+  }
+
   private pino() {
     return {
       info: (obj: object, msg: string) => this.log.log({ ...obj, msg }),
@@ -371,6 +399,7 @@ export class QueueService implements OnModuleInit, OnModuleDestroy {
     if (this.inlineDigest) clearInterval(this.inlineDigest);
     if (this.inlineScheduled) clearInterval(this.inlineScheduled);
     if (this.inlineHardDelete) clearInterval(this.inlineHardDelete);
+    if (this.inlineIdempotencyPurge) clearInterval(this.inlineIdempotencyPurge);
     await this.mediaQueue?.close();
     await this.feedQueue?.close();
     await this.momentsQueue?.close();

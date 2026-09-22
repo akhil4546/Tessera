@@ -73,6 +73,7 @@ export {
   JOB_PUBLISH_SCHEDULED,
   JOB_EXPORT_ACCOUNT,
   JOB_HARD_DELETE,
+  JOB_PURGE_IDEMPOTENCY,
   FEED_FANOUT_FOLLOWER_THRESHOLD,
   type ProcessMediaJob,
   type FanoutPostJob,
@@ -86,7 +87,15 @@ export {
   type PublishScheduledJob,
   type ExportAccountJob,
   type HardDeleteJob,
+  type PurgeIdempotencyJob,
 } from './jobs.ts';
+export {
+  IDEMPOTENCY_PENDING_STATUS,
+  IDEMPOTENCY_PENDING_TTL_MS,
+  IDEMPOTENCY_TTL_MS,
+  purgeIdempotencyRecords,
+  type IdempotencyPurgeResult,
+} from './idempotency-retention.ts';
 export { asVariantMap, emptyVariants, type VariantMap } from './variants.ts';
 export { processMediaItem, type MediaLogger } from './process-media.ts';
 export { processVoice, synthesizeTestVoice, VoiceTooLongError, MAX_VOICE_DURATION_MS } from './process-voice.ts';

@@ -73,7 +73,7 @@ async function bootstrap() {
   const swagger = new DocumentBuilder()
     .setTitle('Tessera API')
     .setDescription(
-      'Phase 9: identity through organisation, plus reporting, moderation, and a separate admin session. Cookie session on web; bearer + refresh token JSON on mobile. Admin uses tessera_admin_* cookies. This is not an Instagram clone.',
+      'Phase 9: identity through organisation, plus reporting, moderation, and a separate admin session. Cookie session on web; bearer + refresh token JSON on mobile. Admin uses tessera_admin_* cookies. Signed-in non-GET routes accept an optional Idempotency-Key. This is not an Instagram clone.',
     )
     .setVersion('0.1.0')
     .addCookieAuth(ACCESS_COOKIE)

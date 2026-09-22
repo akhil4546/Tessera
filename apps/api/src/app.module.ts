@@ -1,5 +1,8 @@
 import { Module } from '@nestjs/common';
+import { APP_INTERCEPTOR } from '@nestjs/core';
 import { LoggerModule } from 'nestjs-pino';
+import { IdempotencyInterceptor } from './common/idempotency.interceptor.js';
+import { IdempotencyService } from './common/idempotency.js';
 import { AuthCoreModule } from './auth/auth-core.module.js';
 import { AuthModule } from './auth/auth.module.js';
 import { GraphModule } from './graph/graph.module.js';
@@ -55,5 +58,6 @@ import { AdminModule } from './admin/admin.module.js';
     SafetyModule,
     AdminModule,
   ],
+  providers: [IdempotencyService, { provide: APP_INTERCEPTOR, useClass: IdempotencyInterceptor }],
 })
 export class AppModule {}
