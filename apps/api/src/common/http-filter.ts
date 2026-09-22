@@ -15,6 +15,11 @@ export class HttpErrorFilter implements ExceptionFilter {
   catch(exception: unknown, host: ArgumentsHost): void {
     const res = host.switchToHttp().getResponse<Response>();
     if (exception instanceof TesseraHttpError) {
+      if (exception.headers) {
+        for (const [name, value] of Object.entries(exception.headers)) {
+          res.setHeader(name, value);
+        }
+      }
       res.status(exception.getStatus()).json(exception.getResponse());
       return;
     }
