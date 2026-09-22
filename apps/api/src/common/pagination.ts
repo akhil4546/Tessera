@@ -26,12 +26,14 @@ export function cursorWhere(cursor: string | undefined):
   };
 }
 
-export function cursorWherePublished(cursor: string | undefined):
-  | { OR: Array<Record<string, unknown>> }
-  | undefined {
+/** Keyset predicate for `publishedAt DESC, idField DESC`. The cursor id is the post id. */
+export function cursorWherePublished(
+  cursor: string | undefined,
+  idField = 'id',
+): { OR: Array<Record<string, unknown>> } | undefined {
   if (!cursor) return undefined;
   const { createdAt: publishedAt, id } = decodeCursor(cursor);
   return {
-    OR: [{ publishedAt: { lt: publishedAt } }, { publishedAt, id: { lt: id } }],
+    OR: [{ publishedAt: { lt: publishedAt } }, { publishedAt, [idField]: { lt: id } }],
   };
 }

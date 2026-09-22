@@ -101,6 +101,7 @@ describeDb('posts & following feed (integration)', () => {
     const feed = await viewerAgent.get('/v1/feed/following').expect(200);
     expect(feed.body.items.some((item: { id: string }) => item.id === created.body.id)).toBe(true);
     expect(feed.body.finishLine.reached).toBe(true);
+    expect(feed.body.finishLine.seenSinceLastVisit).toBe(1);
     expect(feed.body.items[0].appreciation.counts).toBeNull();
 
     const loved = await viewerAgent

@@ -60,6 +60,8 @@ Appreciation counts are omitted for viewers unless `publicAppreciationCounts` is
 
 Response includes `finishLine: { reached, seenSinceLastVisit, olderAvailable }`.
 
+`cursor` is the previous response's `nextCursor`. Pages do not overlap. Order stays `publishedAt` descending, then `id` descending, including across fan-out, Circle, and high-follower posts. `limit` is 1–50 and defaults to 12. `seenSinceLastVisit` is the full count of posts newer than the finish line.
+
 ## Moments
 
 | Method | Path | Notes |

@@ -1,3 +1,5 @@
+import 'reflect-metadata';
+
 process.env.NODE_ENV ??= 'test';
 process.env.JWT_ACCESS_SECRET ??= 'test-jwt-access-secret-32-chars-min';
 process.env.TOTP_ENCRYPTION_KEY ??= '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';

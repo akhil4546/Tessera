@@ -81,6 +81,8 @@ Video uses FFmpeg HLS. If FFmpeg is missing the media row is `failed` with `FFMP
 
 Strict reverse-chronological from accepted follows plus the viewer's own posts. Mutes (`posts`/`both`) and blocks are applied at write and read. After posts newer than `FeedState.followingCaughtUpAt`, the API returns a finish line. Older posts require `keepGoing=true`.
 
+Pages use an opaque `cursor` (`publishedAt` descending, then post `id` descending). Each request reads `limit + 1` rows from three branches and merges them: fan-out `FeedEntry` rows, Circle posts shared with the viewer, and posts from accounts at or above `FEED_FANOUT_FOLLOWER_THRESHOLD` (those accounts are merged at read time, not written into `FeedEntry`). `nextCursor` is null on the last page. `finishLine.seenSinceLastVisit` counts every post newer than the finish line, not just the current page.
+
 Discover ranking is rules-based. See `docs/ranking.md`. Candidate pool is public posts outside the graph. Impressions store the actual signals.
 
 ## Inbox
