@@ -17,6 +17,7 @@ import type {
   SensitivityLevel,
 } from '@tessera/types';
 import type { CreateAppealInput, CreateReportInput } from '@tessera/validation';
+import { SessionCache } from '../auth/session-cache.js';
 import { verifyPassword } from '../common/crypto.js';
 import { TesseraHttpError } from '../common/http-error.js';
 import { RateLimitService } from '../common/rate-limit.js';
@@ -33,6 +34,7 @@ export class SafetyService {
     private readonly rateLimit: RateLimitService,
     private readonly queues: QueueService,
     private readonly storage: StorageService,
+    private readonly sessions: SessionCache,
   ) {}
 
   async report(
@@ -236,10 +238,7 @@ export class SafetyService {
       data: { userId, executeAt },
     });
     await this.prisma.user.update({ where: { id: userId }, data: { deactivatedAt: new Date() } });
-    await this.prisma.session.updateMany({
-      where: { userId, revokedAt: null },
-      data: { revokedAt: new Date() },
-    });
+    await this.sessions.revokeWhere({ userId }, 'user', userId);
     return this.toDeletionView(created);
   }
 

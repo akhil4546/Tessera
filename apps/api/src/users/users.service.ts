@@ -6,6 +6,7 @@ import {
   type UpdateProfileInput,
   extractBioUrls,
 } from '@tessera/validation';
+import { SessionCache } from '../auth/session-cache.js';
 import { TesseraHttpError } from '../common/http-error.js';
 import { cursorWhere, encodeCursor } from '../common/pagination.js';
 import { SearchService } from '../discovery/search.service.js';
@@ -23,6 +24,7 @@ export class UsersService {
     private readonly prisma: PrismaService,
     private readonly storage: StorageService,
     private readonly search: SearchService,
+    private readonly sessions: SessionCache,
   ) {}
 
   private async avatarUrl(key: string | null | undefined): Promise<string | null> {
@@ -218,19 +220,12 @@ export class UsersService {
     if (sessionId === currentSessionId) {
       throw new TesseraHttpError(400, 'CURRENT_SESSION', 'Sign out to end this session.');
     }
-    const updated = await this.prisma.session.updateMany({
-      where: { id: sessionId, userId, revokedAt: null },
-      data: { revokedAt: new Date() },
-    });
-    if (updated.count === 0) throw new TesseraHttpError(404, 'NOT_FOUND', 'Session not found.');
+    const updated = await this.sessions.revokeWhere({ id: sessionId, userId }, 'session');
+    if (updated === 0) throw new TesseraHttpError(404, 'NOT_FOUND', 'Session not found.');
   }
 
   async revokeOtherSessions(userId: string, currentSessionId: string): Promise<number> {
-    const result = await this.prisma.session.updateMany({
-      where: { userId, id: { not: currentSessionId }, revokedAt: null },
-      data: { revokedAt: new Date() },
-    });
-    return result.count;
+    return this.sessions.revokeWhere({ userId, id: { not: currentSessionId } }, 'user', userId);
   }
 
   async present(user: UserWithProfile, viewerId?: string): Promise<PublicProfile> {

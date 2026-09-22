@@ -23,6 +23,7 @@ import { PrismaService } from '../prisma/prisma.service.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
 import { UsersService } from '../users/users.service.js';
 import type { OauthProfile } from './oauth.js';
+import { SessionCache } from './session-cache.js';
 import { inspectRefreshSession } from './session.rules.js';
 import { TokenService } from './tokens.js';
 import { generateTotpSecret, totpOtpauthUrl, verifyTotp } from './totp.js';
@@ -38,6 +39,7 @@ export class AuthService {
     private readonly mail: MailService,
     private readonly rateLimit: RateLimitService,
     private readonly notifications: NotificationsService,
+    private readonly sessions: SessionCache,
   ) {}
 
   async register(input: RegisterInput, req: Request): Promise<AuthSuccess> {
@@ -135,10 +137,7 @@ export class AuthService {
   }
 
   async logout(userId: string, sessionId: string): Promise<void> {
-    await this.prisma.session.updateMany({
-      where: { id: sessionId, userId, revokedAt: null },
-      data: { revokedAt: new Date() },
-    });
+    await this.sessions.revokeWhere({ id: sessionId, userId }, 'session');
   }
 
   async refresh(refreshToken: string | undefined, req: Request, client: ClientKind): Promise<AuthSuccess> {
@@ -152,10 +151,7 @@ export class AuthService {
     }
     const decision = inspectRefreshSession(session);
     if (decision === 'reuse') {
-      await this.prisma.session.updateMany({
-        where: { familyId: session.familyId, revokedAt: null },
-        data: { revokedAt: new Date() },
-      });
+      await this.sessions.revokeWhere({ familyId: session.familyId }, 'user', session.userId);
       throw new TesseraHttpError(401, 'TOKEN_REUSE', 'That refresh token was already used. Sign in again.');
     }
     if (decision !== 'ok') {
@@ -166,6 +162,7 @@ export class AuthService {
       where: { id: session.id },
       data: { replacedById: next.sessionId, revokedAt: new Date() },
     });
+    await this.sessions.invalidateSessions([session.id]);
     const user = await this.users.getMe(session.userId);
     return this.bundle(user, next.accessToken, next.refreshToken, client);
   }
@@ -197,6 +194,10 @@ export class AuthService {
   async resetPassword(token: string, password: string): Promise<void> {
     const row = await this.consumeEmailToken(token, 'reset_password');
     const passwordHash = await hashPassword(password);
+    const live = await this.prisma.session.findMany({
+      where: { userId: row.userId, revokedAt: null },
+      select: { id: true },
+    });
     await this.prisma.$transaction([
       this.prisma.user.update({ where: { id: row.userId }, data: { passwordHash } }),
       this.prisma.session.updateMany({
@@ -204,6 +205,8 @@ export class AuthService {
         data: { revokedAt: new Date() },
       }),
     ]);
+    await this.sessions.invalidateSessions(live.map((session) => session.id));
+    await this.sessions.invalidateUser(row.userId);
     await this.notifications.notify({
       recipientId: row.userId,
       kind: 'security_alert',

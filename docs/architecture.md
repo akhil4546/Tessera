@@ -66,7 +66,7 @@ flowchart LR
 | Worker | (no HTTP) | `tessera-media` (classifier stub before publish) + feed + Moments + Loops + notifications + scheduled + `tessera-safety` (export, hard-delete, hourly idempotency purge) |
 | Expo | 8081 | Tabs + login/signup + feed/create/Me mosaic |
 | Postgres | 5432 | Identity, graph, posts |
-| Redis | 6379 | Shared rate limits and BullMQ. If Redis is down, rate limits fall back per process (non-authoritative) and jobs run inline. |
+| Redis | 6379 | Shared rate limits, the auth session cache, and BullMQ. If Redis is down, rate limits fall back per process (non-authoritative), authenticated requests read sessions from Postgres, and jobs run inline. |
 | MinIO | 9000 / 9001 | Originals and variants. Tests may use `STORAGE_DRIVER=fs` |
 | Meilisearch | 7700 | People, hashtags, places, captions. Postgres fallback if down |
 | Mailpit | 8025 / 1025 | Verification and reset emails |
@@ -74,6 +74,12 @@ flowchart LR
 ## Rate limits
 
 `RateLimitService` is the shared limiter. Redis runs one Lua script per hit (`INCR`, then `PEXPIRE` only when the key has no TTL) so a crash cannot leave a counter that never expires. A `429` includes `Retry-After` set to the seconds left in that window. When `REDIS_URL` is unset, or Redis is failing, the process uses its own counter and logs that this fallback is non-authoritative. Redis is tried again after 5 seconds, doubling up to 30 seconds, instead of being turned off for the life of the process.
+
+## Auth session cache
+
+Authenticated requests cache the session and suspension tuple in Redis under `auth:sid:{sessionId}` for at most 60 seconds, and never longer than the access token or that session's expiry. Logout, session revoke, refresh rotation, refresh-token reuse, password reset, suspension, and account deletion drop it. Bulk revokes also bump `auth:ugen:{userId}` after the database commit, so a session cached mid-revoke cannot keep the old tuple.
+
+When `REDIS_URL` is unset or Redis is failing, the guard reads Postgres and logs that the cache is bypassed. Tuples written before the failure are ignored until that 60 second TTL has passed. Redis is tried again after 5 seconds, doubling up to 30 seconds. Inbox socket connects and admin sessions still read Postgres on each check.
 
 ## Upload pipeline
 

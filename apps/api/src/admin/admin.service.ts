@@ -12,6 +12,7 @@ import type {
   Paginated,
   ReportTargetKind,
 } from '@tessera/types';
+import { SessionCache } from '../auth/session-cache.js';
 import { TesseraHttpError } from '../common/http-error.js';
 import { encodeCursor } from '../common/pagination.js';
 import { PrismaService } from '../prisma/prisma.service.js';
@@ -24,6 +25,7 @@ export class AdminService {
     private readonly prisma: PrismaService,
     private readonly queues: QueueService,
     private readonly search: SearchService,
+    private readonly sessions: SessionCache,
   ) {}
 
   async queue(opts: {
@@ -168,7 +170,7 @@ export class AdminService {
       where: { id: userId },
       data: { suspendedAt: new Date(), suspendReason: reason, suspensionEndsAt: ends },
     });
-    await this.prisma.session.updateMany({ where: { userId, revokedAt: null }, data: { revokedAt: new Date() } });
+    await this.sessions.revokeWhere({ userId }, 'user', userId);
     await meiliDeleteDocument(SEARCH_INDEXES.people, userId);
     await this.audit(adminId, 'user.suspend', 'account', userId, { reason, days });
     return this.getUser(userId);

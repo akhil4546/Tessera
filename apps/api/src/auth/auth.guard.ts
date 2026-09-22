@@ -2,15 +2,15 @@ import { type CanActivate, type ExecutionContext, Injectable } from '@nestjs/com
 import type { Request } from 'express';
 import { readAccessToken } from '../common/cookies.js';
 import { TesseraHttpError } from '../common/http-error.js';
-import { PrismaService } from '../prisma/prisma.service.js';
 import type { RequestUser } from './current-user.js';
+import { isAccountSuspended, SessionCache } from './session-cache.js';
 import { TokenService } from './tokens.js';
 
 @Injectable()
 export class AuthGuard implements CanActivate {
   constructor(
     private readonly tokens: TokenService,
-    private readonly prisma: PrismaService,
+    private readonly sessions: SessionCache,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -20,20 +20,11 @@ export class AuthGuard implements CanActivate {
       throw new TesseraHttpError(401, 'UNAUTHENTICATED', 'Sign in to continue.');
     }
     const payload = await this.tokens.verifyAccess(token);
-    const session = await this.prisma.session.findFirst({
-      where: { id: payload.sid, userId: payload.sub, revokedAt: null, expiresAt: { gt: new Date() } },
-    });
-    if (!session) {
-      throw new TesseraHttpError(401, 'UNAUTHENTICATED', 'Sign in to continue.');
-    }
-    const account = await this.prisma.user.findUnique({
-      where: { id: payload.sub },
-      select: { suspendedAt: true, suspensionEndsAt: true, deactivatedAt: true },
-    });
+    const account = await this.sessions.resolve(payload.sid, payload.sub);
     if (!account) {
       throw new TesseraHttpError(401, 'UNAUTHENTICATED', 'Sign in to continue.');
     }
-    if (account.suspendedAt && (!account.suspensionEndsAt || account.suspensionEndsAt > new Date())) {
+    if (isAccountSuspended(account)) {
       throw new TesseraHttpError(403, 'ACCOUNT_SUSPENDED', 'This account is suspended.');
     }
     req.user = { id: payload.sub, handle: payload.hdl, sessionId: payload.sid };
@@ -45,7 +36,7 @@ export class AuthGuard implements CanActivate {
 export class OptionalAuthGuard implements CanActivate {
   constructor(
     private readonly tokens: TokenService,
-    private readonly prisma: PrismaService,
+    private readonly sessions: SessionCache,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -54,10 +45,8 @@ export class OptionalAuthGuard implements CanActivate {
     if (!token) return true;
     try {
       const payload = await this.tokens.verifyAccess(token);
-      const session = await this.prisma.session.findFirst({
-        where: { id: payload.sid, userId: payload.sub, revokedAt: null, expiresAt: { gt: new Date() } },
-      });
-      if (session) {
+      const account = await this.sessions.resolve(payload.sid, payload.sub);
+      if (account) {
         req.user = { id: payload.sub, handle: payload.hdl, sessionId: payload.sid };
       }
     } catch {
