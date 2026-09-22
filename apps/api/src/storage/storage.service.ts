@@ -1,5 +1,6 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { createObjectStorage, resolveStorageConfig, type ObjectStorage } from '@tessera/media';
+import { signFsMediaUrl } from './fs-media-url.js';
 
 const SIGN_TTL = 60 * 60;
 
@@ -42,7 +43,7 @@ export class StorageService implements OnModuleInit {
   async signGet(key: string | null | undefined, expiresSeconds = SIGN_TTL): Promise<string | null> {
     if (!key) return null;
     if (this.driver === 'fs') {
-      return `/v1/media/file/${encodeURIComponent(key)}`;
+      return signFsMediaUrl(key, expiresSeconds);
     }
     return this.inner.signGet(key, expiresSeconds);
   }

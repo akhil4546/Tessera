@@ -29,7 +29,7 @@ Unchanged from Phase 1. `GET /v1/users/:handle` now includes `counts.posts` and 
 | POST | `/v1/media/:id/complete` | Enqueues processing (inline if Redis is down) |
 | GET | `/v1/media/:id` | Status + signed variant URLs |
 | POST | `/v1/media/:id/suggest-alt` | 501 `ALT_SUGGEST_NOT_CONFIGURED` without `XAI_API_KEY` |
-| GET | `/v1/media/file/:key` | fs driver reads |
+| GET | `/v1/media/file/:key?exp=&sig=` | fs driver reads. `sig` is HMAC-SHA256 of `${exp}.${key}` using `JWT_ACCESS_SECRET`. Missing, tampered, or expired links return 403 `MEDIA_URL_INVALID`. `..` in the key is still 400. |
 
 ## Posts, appreciations, comments
 

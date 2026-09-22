@@ -5,17 +5,19 @@ import {
   Header,
   Param,
   Post,
+  Query,
   Req,
   Res,
   UseGuards,
 } from '@nestjs/common';
-import { ApiCookieAuth, ApiConsumes, ApiTags } from '@nestjs/swagger';
+import { ApiCookieAuth, ApiConsumes, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { mediaIntentSchema } from '@tessera/validation';
 import type { Request, Response } from 'express';
 import { AuthGuard } from '../auth/auth.guard.js';
 import { CurrentUser, type RequestUser } from '../auth/current-user.js';
 import { TesseraHttpError } from '../common/http-error.js';
 import { ZodPipe } from '../common/zod-pipe.js';
+import { verifyFsMediaToken } from '../storage/fs-media-url.js';
 import { MediaService } from './media.service.js';
 
 @ApiTags('media')
@@ -61,13 +63,24 @@ export class MediaController {
   }
 
   @Get('file/:key')
+  @ApiQuery({ name: 'exp', required: true, description: 'Unix expiry in seconds' })
+  @ApiQuery({ name: 'sig', required: true, description: 'HMAC-SHA256 over `${exp}.${key}`' })
   @Header('Cache-Control', 'private, max-age=60')
-  async file(@Param('key') key: string, @Res() res: Response) {
+  async file(
+    @Param('key') key: string,
+    @Query('exp') exp: unknown,
+    @Query('sig') sig: unknown,
+    @Res() res: Response,
+  ) {
     const decoded = decodeURIComponent(key);
     if (decoded.includes('..')) {
       throw new TesseraHttpError(400, 'VALIDATION', 'Invalid key');
     }
-    const file = await this.media.readFile(decoded);
+    const token = verifyFsMediaToken(decoded, exp, sig);
+    if (!token.ok) {
+      throw new TesseraHttpError(403, 'MEDIA_URL_INVALID', 'This media link is invalid or expired.');
+    }
+    const file = await this.media.readFile(decoded, token.exp);
     res.setHeader('Content-Type', file.contentType);
     res.send(file.body);
   }

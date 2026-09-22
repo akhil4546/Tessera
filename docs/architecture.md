@@ -75,6 +75,8 @@ flowchart LR
 
 Client requests a presigned URL (or `POST /v1/media/:id/bytes` on the fs driver) → uploads the original → `POST .../complete` → worker (or inline) strips EXIF, writes AVIF/WebP variants at 150/320/640/1080, blurhash → post becomes visible → fan-out job writes `FeedEntry` rows.
 
+Reads of non-public media use expiring URLs. S3 uses presigned GETs. The fs driver (CI, Playwright, and any non-S3 deployment) returns `/v1/media/file/:key?exp=&sig=` instead of a bare path. The signature is HMAC-SHA256 of the expiry and the object key.
+
 Video uses FFmpeg HLS. If FFmpeg is missing the media row is `failed` with `FFMPEG_MISSING`.
 
 ## Following feed

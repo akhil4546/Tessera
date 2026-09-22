@@ -7,6 +7,7 @@ import { TesseraHttpError } from '../common/http-error.js';
 import { RateLimitService } from '../common/rate-limit.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { QueueService } from '../queue/queue.service.js';
+import { fsMediaUrl } from '../storage/fs-media-url.js';
 import { StorageService } from '../storage/storage.service.js';
 
 const PUT_TTL = 15 * 60;
@@ -94,9 +95,13 @@ export class MediaService {
     return { suggestion: null, reason: 'ALT_SUGGEST_NOT_WIRED' };
   }
 
-  async readFile(key: string): Promise<{ body: Buffer; contentType: string }> {
+  async readFile(key: string, expUnixSeconds?: number): Promise<{ body: Buffer; contentType: string }> {
     let body = await this.storage.get(key);
     if (key.endsWith('.m3u8') && this.storage.driver === 'fs') {
+      if (expUnixSeconds == null) {
+        throw new TesseraHttpError(403, 'MEDIA_URL_INVALID', 'This media link is invalid or expired.');
+      }
+      // Child links expire with the playlist URL. A rewrite must not mint a longer grant.
       const dir = key.replace(/\/[^/]+$/, '');
       const rewritten = body
         .toString('utf8')
@@ -105,7 +110,7 @@ export class MediaService {
           const trimmed = line.trim();
           if (!trimmed || trimmed.startsWith('#') || /^https?:\/\//i.test(trimmed)) return line;
           const child = `${dir}/${trimmed.replace(/^\.\//, '')}`;
-          return `/v1/media/file/${encodeURIComponent(child)}`;
+          return fsMediaUrl(child, expUnixSeconds);
         })
         .join('\n');
       body = Buffer.from(rewritten, 'utf8');

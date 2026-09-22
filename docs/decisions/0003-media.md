@@ -18,5 +18,6 @@ Phase 2 needs presigned uploads, EXIF stripping, image variants, optional HLS, a
 ## Consequences
 
 - Production must set S3/MinIO and run `apps/worker`.
+- When `STORAGE_DRIVER=fs`, `GET /v1/media/file/:key` requires an expiring HMAC (`exp` and `sig` over the object key) signed with `JWT_ACCESS_SECRET`. Unsigned keys are not readable. S3 reads stay on presigned URLs. Playlist rewrites carry the same expiry as the playlist URL.
 - Seed and tests bake images with Sharp in-process.
 - Circles, drafts, and scheduled posts ship in Phase 8. Media processing holds `scheduledAt` posts until the publish job.
