@@ -47,6 +47,23 @@ export async function meiliAvailable(): Promise<boolean> {
   return Boolean(res?.ok);
 }
 
+/** Readiness probe. `down` means configured but unreachable; callers decide the fallback label. */
+export async function probeMeilisearch(
+  timeoutMs: number,
+): Promise<'ok' | 'down' | 'NOT_CONFIGURED'> {
+  const cfg = meiliConfig();
+  if (!cfg) return 'NOT_CONFIGURED';
+  try {
+    const res = await fetch(`${cfg.host}/health`, {
+      headers: { Authorization: `Bearer ${cfg.key}` },
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+    return res.ok ? 'ok' : 'down';
+  } catch {
+    return 'down';
+  }
+}
+
 export async function ensureSearchIndexes(): Promise<boolean> {
   const cfg = meiliConfig();
   if (!cfg) return false;

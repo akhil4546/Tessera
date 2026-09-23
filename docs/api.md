@@ -10,6 +10,12 @@ Web uses httpOnly cookies (`tessera_at`, `tessera_rt`) with `credentials: 'inclu
 
 OpenAPI: `/docs`.
 
+## Health
+
+`GET /health` and `GET /v1/health` are liveness: `{ "status": "ok", "service": "tessera-api" }`. They do not check dependencies.
+
+`GET /health/ready` and `GET /v1/health/ready` check Postgres, Redis, object storage, and Meilisearch. Each check times out after 800ms and is reported on its own. `status` is `ok` when all four succeed, `degraded` when Postgres and storage are up but Redis or search is `NOT_CONFIGURED` or `DEGRADED`, and `down` when Postgres or storage failed. `down` is HTTP 503. `ok` and `degraded` are HTTP 200. Responses send `Cache-Control: no-store`.
+
 ## Idempotency
 
 Signed-in non-GET routes accept an optional `Idempotency-Key` header (one line, at most 255 characters). The same user, key, and path replays the first successful response for 24 hours and does not run the handler again. Replay returns that original body, including any signed media URLs from that moment — fetch the resource again if you need fresh URLs.

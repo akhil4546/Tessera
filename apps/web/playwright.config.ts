@@ -36,7 +36,7 @@ export default defineConfig({
   webServer: [
     {
       command: 'pnpm --filter @tessera/api start',
-      url: `${apiURL}/health`,
+      url: `${apiURL}/health/ready`,
       reuseExistingServer: !process.env.CI,
       timeout: 120_000,
       env: apiEnv,

@@ -1,4 +1,4 @@
-import { mkdir, readFile, unlink, writeFile } from 'node:fs/promises';
+import { access, mkdir, readFile, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import {
   CreateBucketCommand,
@@ -18,6 +18,8 @@ export type ObjectStorage = {
   signPut(key: string, contentType: string, expiresSeconds: number): Promise<string>;
   signGet(key: string, expiresSeconds: number): Promise<string>;
   ensureReady(): Promise<void>;
+  /** Confirms the bucket or directory is reachable. Does not create buckets or rewrite CORS. */
+  probe(): Promise<void>;
 };
 
 export type StorageConfig = {
@@ -77,6 +79,10 @@ class FsStorage implements ObjectStorage {
     await mkdir(this.root, { recursive: true });
   }
 
+  async probe(): Promise<void> {
+    await access(this.root);
+  }
+
   async put(key: string, body: Buffer): Promise<void> {
     const full = this.resolve(key);
     await mkdir(path.dirname(full), { recursive: true });
@@ -118,6 +124,10 @@ class S3Storage implements ObjectStorage {
       forcePathStyle: true,
       credentials: { accessKeyId: s3.accessKey, secretAccessKey: s3.secretKey },
     });
+  }
+
+  async probe(): Promise<void> {
+    await this.client.send(new HeadBucketCommand({ Bucket: this.bucket }));
   }
 
   async ensureReady(): Promise<void> {

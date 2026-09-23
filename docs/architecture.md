@@ -61,7 +61,7 @@ flowchart LR
 | Process | Port | What it does |
 | --- | --- | --- |
 | Web | 3000 | Auth, Following feed + Moment tray, Loops player, Discover, create Post/Moment/Loop |
-| API | 3001 | `/health`, identity, media, posts, feed, Moments, Loops, search, Discover, Inbox REST + `/v1/inbox` sockets, notifications, OpenAPI `/docs` |
+| API | 3001 | `/health` liveness, `/health/ready`, identity, media, posts, feed, Moments, Loops, search, Discover, Inbox REST + `/v1/inbox` sockets, notifications, OpenAPI `/docs` |
 | Admin | 3002 | Staff app. Separate `tessera_admin_*` cookies. Queue, lookup, takedown, suspend, appeals, audit |
 | Worker | (no HTTP) | `tessera-media` (classifier stub before publish) + feed + Moments + Loops + notifications + scheduled + `tessera-safety` (export, hard-delete, hourly idempotency purge) |
 | Expo | 8081 | Tabs + login/signup + feed/create/Me mosaic |
@@ -70,6 +70,14 @@ flowchart LR
 | MinIO | 9000 / 9001 | Originals and variants. Tests may use `STORAGE_DRIVER=fs` |
 | Meilisearch | 7700 | People, hashtags, places, captions. Postgres fallback if down |
 | Mailpit | 8025 / 1025 | Verification and reset emails |
+
+## Health
+
+`GET /health` and `GET /v1/health` are liveness. The body is `{ "status": "ok", "service": "tessera-api" }`. They do not open Postgres, Redis, storage, or Meilisearch. The build phase is stated in the README.
+
+`GET /health/ready` and `GET /v1/health/ready` check those four dependencies in parallel. Each check gives up after 800ms. Postgres runs `SELECT 1`. Object storage calls `probe`: the fs driver checks that the storage root exists, and S3 sends `HeadBucket` without creating a bucket or rewriting CORS. Redis `PING`s when `REDIS_URL` is set. Meilisearch `GET /health` runs when `MEILI_HOST` and `MEILI_API_KEY` are both set.
+
+A check is `ok`, `down`, `DEGRADED`, or `NOT_CONFIGURED`. Overall `status` is `ok` when every check is `ok`, `down` when Postgres or storage is `down`, and `degraded` otherwise. `down` is HTTP 503. `ok` and `degraded` are HTTP 200, so CI and Playwright can become ready without Redis or Meilisearch. Those two keep their existing fallbacks: per-process rate limits and uncached sessions, and Postgres search. Both routes send `Cache-Control: no-store`.
 
 ## Rate limits
 

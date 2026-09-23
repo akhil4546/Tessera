@@ -19,7 +19,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
     } catch (err) {
       const message = err instanceof Error ? err.message : 'unknown error';
       this.log.warn(
-        `SOFT-FAIL: Postgres is unreachable (${message}). Health still serves; identity routes need the database.`,
+        `SOFT-FAIL: Postgres is unreachable (${message}). Liveness still serves; /health/ready reports postgres down.`,
       );
     }
   }

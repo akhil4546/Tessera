@@ -23,9 +23,13 @@ export class StorageService implements OnModuleInit {
     } catch (err) {
       const message = err instanceof Error ? err.message : 'unknown';
       this.log.warn(
-        `SOFT-FAIL: object storage not ready (${message}). Uploads will fail until MinIO/S3 or STORAGE_DRIVER=fs is available.`,
+        `SOFT-FAIL: object storage not ready (${message}). /health/ready reports storage down until the bucket or fs root is available.`,
       );
     }
+  }
+
+  probe(): Promise<void> {
+    return this.inner.probe();
   }
 
   put(key: string, body: Buffer, contentType: string) {

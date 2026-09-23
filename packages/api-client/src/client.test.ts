@@ -6,7 +6,7 @@ describe('createClient', () => {
     const client = createClient({
       baseUrl: 'http://tessera.test',
       fetch: async () =>
-        new Response(JSON.stringify({ status: 'ok', service: 'tessera-api', phase: 7 }), {
+        new Response(JSON.stringify({ status: 'ok', service: 'tessera-api' }), {
           status: 200,
           headers: { 'Content-Type': 'application/json' },
         }),
@@ -15,7 +15,6 @@ describe('createClient', () => {
     await expect(client.getHealth()).resolves.toEqual({
       status: 'ok',
       service: 'tessera-api',
-      phase: 7,
     });
   });
 });

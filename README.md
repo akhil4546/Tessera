@@ -71,7 +71,7 @@ pnpm dev                 # web :3000, api :3001, admin :3002, worker
 | http://localhost:3000/boards | Saved and custom Boards |
 | http://localhost:3000/settings/notifications | Per-type channels, quiet hours, digest |
 | http://localhost:3000/login | Sign in |
-| http://localhost:3001/health | API health |
+| http://localhost:3001/health | API liveness. Readiness is `/health/ready` |
 | http://localhost:3001/docs | OpenAPI |
 | http://localhost:3002 | Admin — staff login (not the public session) |
 | http://localhost:9001 | MinIO console (`tessera` / `tessera-minio`) |
@@ -95,7 +95,7 @@ pnpm e2e                 # Playwright: shell, login, feed, Moments, Loops, Disco
 pnpm seed                # 13 users + admin, safety cases, Circles, Boards
 ```
 
-CI and Playwright use `STORAGE_DRIVER=fs` and `MEDIA_PROCESS=inline` so they do not need MinIO or Redis.
+CI and Playwright use `STORAGE_DRIVER=fs` and `MEDIA_PROCESS=inline` so they do not need MinIO or Redis. Playwright waits on `/health/ready`, which stays available when Redis or Meilisearch is unset and returns 503 when Postgres or storage is down.
 
 ## Scripts
 

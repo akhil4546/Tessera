@@ -210,6 +210,7 @@ export {
   SEARCH_INDEXES,
   meiliConfig,
   meiliAvailable,
+  probeMeilisearch,
   ensureSearchIndexes,
   meiliIndexDocuments,
   meiliDeleteDocument,
