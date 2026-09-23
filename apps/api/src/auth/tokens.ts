@@ -1,7 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { SignJWT, jwtVerify } from 'jose';
+import { decodeProtectedHeader, jwtVerify, SignJWT, type JWTPayload } from 'jose';
 import { ACCESS_TTL_SECONDS } from '../common/cookies.js';
 import { TesseraHttpError } from '../common/http-error.js';
+import { assertJwtSecrets, loadJwtKey, type JwtKey } from './jwt-secrets.js';
 
 export type AccessPayload = {
   sub: string;
@@ -35,68 +36,126 @@ export type OauthSetupPayload = {
   name: string;
 };
 
-function secretKey(): Uint8Array {
-  const secret = process.env.JWT_ACCESS_SECRET;
-  if (!secret || secret.length < 32) {
-    throw new Error('JWT_ACCESS_SECRET must be at least 32 characters.');
+type SecretFamily = 'access' | 'admin' | 'purpose';
+
+const FAMILY_ENV: Record<SecretFamily, { current: string; previous: string }> = {
+  access: { current: 'JWT_ACCESS_SECRET', previous: 'JWT_ACCESS_SECRET_PREVIOUS' },
+  admin: { current: 'JWT_ADMIN_SECRET', previous: 'JWT_ADMIN_SECRET_PREVIOUS' },
+  purpose: { current: 'JWT_PURPOSE_SECRET', previous: 'JWT_PURPOSE_SECRET_PREVIOUS' },
+};
+
+function keysFor(family: SecretFamily): { current: JwtKey; previous: JwtKey | null } {
+  const names = FAMILY_ENV[family];
+  return {
+    current: loadJwtKey(process.env, names.current, true),
+    previous: loadJwtKey(process.env, names.previous, false),
+  };
+}
+
+function isSecretConfigError(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    (error.message.includes('must be at least 32') || error.message.includes('must be different'))
+  );
+}
+
+function keysForKid(kid: unknown, current: JwtKey, previous: JwtKey | null): JwtKey[] {
+  if (kid === undefined) {
+    return previous && previous.kid !== current.kid ? [current, previous] : [current];
   }
-  return new TextEncoder().encode(secret);
+  if (typeof kid !== 'string' || kid.length === 0) throw new Error('kid');
+  if (kid === current.kid) return [current];
+  if (previous && kid === previous.kid) return [previous];
+  throw new Error('kid');
+}
+
+async function signJwt(
+  payload: JWTPayload,
+  family: SecretFamily,
+  issuer: string,
+  expiration: string,
+): Promise<string> {
+  const { current } = keysFor(family);
+  return new SignJWT(payload)
+    .setProtectedHeader({ alg: 'HS256', kid: current.kid })
+    .setIssuedAt()
+    .setExpirationTime(expiration)
+    .setIssuer(issuer)
+    .sign(current.key);
+}
+
+async function verifyJwt(token: string, family: SecretFamily, issuer: string): Promise<JWTPayload> {
+  const { current, previous } = keysFor(family);
+  const header = decodeProtectedHeader(token);
+  if (header.alg !== 'HS256') throw new Error('alg');
+  const candidates = keysForKid(header.kid, current, previous);
+  let lastError: unknown;
+  for (const candidate of candidates) {
+    try {
+      const { payload } = await jwtVerify(token, candidate.key, {
+        issuer,
+        algorithms: ['HS256'],
+      });
+      return payload;
+    } catch (error) {
+      lastError = error;
+    }
+  }
+  throw lastError instanceof Error ? lastError : new Error('verify');
+}
+
+function rejectAs(error: unknown, status: number, code: string, message: string): never {
+  if (isSecretConfigError(error)) throw error;
+  throw new TesseraHttpError(status, code, message);
 }
 
 @Injectable()
 export class TokenService {
+  constructor() {
+    assertJwtSecrets(process.env);
+  }
+
   async signAccess(payload: AccessPayload): Promise<string> {
-    return new SignJWT(payload)
-      .setProtectedHeader({ alg: 'HS256' })
-      .setIssuedAt()
-      .setExpirationTime(`${ACCESS_TTL_SECONDS}s`)
-      .setIssuer('tessera')
-      .sign(secretKey());
+    return signJwt(payload, 'access', 'tessera', `${ACCESS_TTL_SECONDS}s`);
   }
 
   async verifyAccess(token: string): Promise<AccessPayload> {
     try {
-      const { payload } = await jwtVerify(token, secretKey(), { issuer: 'tessera' });
-      if (typeof payload.sub !== 'string' || typeof payload.sid !== 'string' || typeof payload.hdl !== 'string') {
+      const payload = await verifyJwt(token, 'access', 'tessera');
+      if (
+        typeof payload.sub !== 'string' ||
+        typeof payload.sid !== 'string' ||
+        typeof payload.hdl !== 'string'
+      ) {
         throw new Error('bad payload');
       }
       return { sub: payload.sub, sid: payload.sid, hdl: payload.hdl };
-    } catch {
-      throw new TesseraHttpError(401, 'UNAUTHENTICATED', 'Sign in again.');
+    } catch (error) {
+      rejectAs(error, 401, 'UNAUTHENTICATED', 'Sign in again.');
     }
   }
 
   async signChallenge(userId: string): Promise<string> {
-    return new SignJWT({ sub: userId, purpose: '2fa' })
-      .setProtectedHeader({ alg: 'HS256' })
-      .setIssuedAt()
-      .setExpirationTime('5m')
-      .setIssuer('tessera')
-      .sign(secretKey());
+    return signJwt({ sub: userId, purpose: '2fa' }, 'purpose', 'tessera', '5m');
   }
 
   async verifyChallenge(token: string): Promise<string> {
     try {
-      const { payload } = await jwtVerify(token, secretKey(), { issuer: 'tessera' });
+      const payload = await verifyJwt(token, 'purpose', 'tessera');
       if (payload.purpose !== '2fa' || typeof payload.sub !== 'string') throw new Error('bad');
       return payload.sub;
-    } catch {
-      throw new TesseraHttpError(401, 'UNAUTHENTICATED', 'That two-factor challenge expired. Sign in again.');
+    } catch (error) {
+      rejectAs(error, 401, 'UNAUTHENTICATED', 'That two-factor challenge expired. Sign in again.');
     }
   }
 
   async signOauthState(payload: OauthStatePayload): Promise<string> {
-    return new SignJWT(payload)
-      .setProtectedHeader({ alg: 'HS256' })
-      .setIssuedAt()
-      .setExpirationTime('10m')
-      .setIssuer('tessera')
-      .sign(secretKey());
+    return signJwt(payload, 'purpose', 'tessera', '10m');
   }
 
   async verifyOauthState(token: string): Promise<OauthStatePayload> {
     try {
-      const { payload } = await jwtVerify(token, secretKey(), { issuer: 'tessera' });
+      const payload = await verifyJwt(token, 'purpose', 'tessera');
       if (
         payload.purpose !== 'oauth' ||
         (payload.provider !== 'google' && payload.provider !== 'apple') ||
@@ -105,49 +164,18 @@ export class TokenService {
         throw new Error('bad');
       }
       return { purpose: 'oauth', provider: payload.provider, client: payload.client };
-    } catch {
-      throw new TesseraHttpError(400, 'OAUTH_STATE', 'OAuth state is invalid or expired.');
+    } catch (error) {
+      rejectAs(error, 400, 'OAUTH_STATE', 'OAuth state is invalid or expired.');
     }
   }
 
   async signOauthSetup(payload: OauthSetupPayload): Promise<string> {
-    return new SignJWT(payload)
-      .setProtectedHeader({ alg: 'HS256' })
-      .setIssuedAt()
-      .setExpirationTime('15m')
-      .setIssuer('tessera')
-      .sign(secretKey());
-  }
-
-  async signAdminAccess(payload: AdminAccessPayload): Promise<string> {
-    return new SignJWT(payload)
-      .setProtectedHeader({ alg: 'HS256' })
-      .setIssuedAt()
-      .setExpirationTime(`${ACCESS_TTL_SECONDS}s`)
-      .setIssuer('tessera-admin')
-      .sign(secretKey());
-  }
-
-  async verifyAdminAccess(token: string): Promise<AdminAccessPayload> {
-    try {
-      const { payload } = await jwtVerify(token, secretKey(), { issuer: 'tessera-admin' });
-      if (
-        typeof payload.sub !== 'string' ||
-        typeof payload.sid !== 'string' ||
-        typeof payload.eml !== 'string' ||
-        (payload.role !== 'moderator' && payload.role !== 'admin' && payload.role !== 'superadmin')
-      ) {
-        throw new Error('bad payload');
-      }
-      return { sub: payload.sub, sid: payload.sid, eml: payload.eml, role: payload.role };
-    } catch {
-      throw new TesseraHttpError(401, 'UNAUTHENTICATED', 'Sign in to the admin app again.');
-    }
+    return signJwt(payload, 'purpose', 'tessera', '15m');
   }
 
   async verifyOauthSetup(token: string): Promise<OauthSetupPayload> {
     try {
-      const { payload } = await jwtVerify(token, secretKey(), { issuer: 'tessera' });
+      const payload = await verifyJwt(token, 'purpose', 'tessera');
       if (
         payload.purpose !== 'oauth-setup' ||
         (payload.provider !== 'google' && payload.provider !== 'apple') ||
@@ -164,8 +192,34 @@ export class TokenService {
         email: payload.email,
         name: payload.name,
       };
-    } catch {
-      throw new TesseraHttpError(401, 'OAUTH_SETUP', 'That sign-in expired. Start again from Google or Apple.');
+    } catch (error) {
+      rejectAs(
+        error,
+        401,
+        'OAUTH_SETUP',
+        'That sign-in expired. Start again from Google or Apple.',
+      );
+    }
+  }
+
+  async signAdminAccess(payload: AdminAccessPayload): Promise<string> {
+    return signJwt(payload, 'admin', 'tessera-admin', `${ACCESS_TTL_SECONDS}s`);
+  }
+
+  async verifyAdminAccess(token: string): Promise<AdminAccessPayload> {
+    try {
+      const payload = await verifyJwt(token, 'admin', 'tessera-admin');
+      if (
+        typeof payload.sub !== 'string' ||
+        typeof payload.sid !== 'string' ||
+        typeof payload.eml !== 'string' ||
+        (payload.role !== 'moderator' && payload.role !== 'admin' && payload.role !== 'superadmin')
+      ) {
+        throw new Error('bad payload');
+      }
+      return { sub: payload.sub, sid: payload.sid, eml: payload.eml, role: payload.role };
+    } catch (error) {
+      rejectAs(error, 401, 'UNAUTHENTICATED', 'Sign in to the admin app again.');
     }
   }
 }

@@ -22,7 +22,11 @@ The key is ignored when nobody is signed in (`/v1/auth/*`) and on admin routes. 
 
 ## Auth
 
-Unchanged from Phase 1 (`/v1/auth/*`, `/v1/me`, sessions, 2FA, OAuth 501 until configured).
+`/v1/auth/*`, `/v1/me`, sessions, 2FA, and OAuth (501 until that provider is configured).
+
+User access tokens, admin access tokens, and short-lived purpose tokens (2FA challenge, OAuth state, OAuth setup) are signed with different secrets: `JWT_ACCESS_SECRET`, `JWT_ADMIN_SECRET`, and `JWT_PURPOSE_SECRET`. The process exits at startup if any of those is missing, shorter than 32 characters, or a copy of another. The `kid` header selects the current key or, during a rotation, `JWT_ACCESS_SECRET_PREVIOUS`, `JWT_ADMIN_SECRET_PREVIOUS`, or `JWT_PURPOSE_SECRET_PREVIOUS`. Tokens minted before `kid` was added still verify until they expire. Access tokens last 15 minutes; remove the previous secret after that.
+
+Filesystem media URLs are outside that rotation. They use the current `JWT_ACCESS_SECRET` only.
 
 ## Identity and graph
 

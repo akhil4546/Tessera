@@ -9,6 +9,9 @@ const apiEnv = {
   NODE_ENV: 'test',
   DATABASE_URL: process.env.DATABASE_URL ?? 'postgresql://tessera:tessera@localhost:5432/tessera',
   JWT_ACCESS_SECRET: process.env.JWT_ACCESS_SECRET ?? 'test-jwt-access-secret-32-chars-min',
+  JWT_ADMIN_SECRET: process.env.JWT_ADMIN_SECRET ?? 'test-jwt-admin-secret-32-characters-long',
+  JWT_PURPOSE_SECRET:
+    process.env.JWT_PURPOSE_SECRET ?? 'test-jwt-purpose-secret-32-characters-long',
   TOTP_ENCRYPTION_KEY:
     process.env.TOTP_ENCRYPTION_KEY ??
     '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',

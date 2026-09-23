@@ -2,6 +2,8 @@ import 'reflect-metadata';
 
 process.env.NODE_ENV ??= 'test';
 process.env.JWT_ACCESS_SECRET ??= 'test-jwt-access-secret-32-chars-min';
+process.env.JWT_ADMIN_SECRET ??= 'test-jwt-admin-secret-32-characters-long';
+process.env.JWT_PURPOSE_SECRET ??= 'test-jwt-purpose-secret-32-characters-long';
 process.env.TOTP_ENCRYPTION_KEY ??= '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
 process.env.WEB_ORIGIN ??= 'http://127.0.0.1:3100';
 process.env.COOKIE_SECURE ??= 'false';

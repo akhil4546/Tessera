@@ -5,6 +5,7 @@ import { createHmac, timingSafeEqual } from 'node:crypto';
  * `${exp}.${key}` keeps the pair unambiguous: exp is digits, so the first dot
  * is the boundary. Plain `key + exp` collides (`a`+`12` vs `a1`+`2`).
  * Rotating JWT_ACCESS_SECRET invalidates outstanding filesystem media URLs.
+ * JWT_ACCESS_SECRET_PREVIOUS is not accepted here.
  */
 function signingSecret(env: NodeJS.ProcessEnv): string {
   const secret = env.JWT_ACCESS_SECRET;

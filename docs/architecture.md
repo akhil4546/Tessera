@@ -81,6 +81,12 @@ Authenticated requests cache the session and suspension tuple in Redis under `au
 
 When `REDIS_URL` is unset or Redis is failing, the guard reads Postgres and logs that the cache is bypassed. Tuples written before the failure are ignored until that 60 second TTL has passed. Redis is tried again after 5 seconds, doubling up to 30 seconds. Inbox socket connects and admin sessions still read Postgres on each check.
 
+## Signing keys
+
+User access tokens (`iss: tessera`), admin access tokens (`iss: tessera-admin`), and short-lived purpose tokens (2FA challenge, OAuth state, OAuth setup) are HS256 and do not share a secret. The env vars are `JWT_ACCESS_SECRET`, `JWT_ADMIN_SECRET`, and `JWT_PURPOSE_SECRET`. Each must be at least 32 characters and distinct. `apps/api/src/main.ts` checks that before the process listens.
+
+Each token carries `kid`, the first 16 hex characters of SHA-256 of the secret that signed it. To rotate, set `JWT_*_SECRET_PREVIOUS` to the outgoing secret and put the new value in `JWT_*_SECRET`. Verification follows `kid`. Tokens with no `kid` try the current secret, then the previous one. Access tokens last 15 minutes, so the previous secret can come out after that. Filesystem media signatures use the current `JWT_ACCESS_SECRET` only and do not accept the previous secret.
+
 ## Upload pipeline
 
 Client requests a presigned URL (or `POST /v1/media/:id/bytes` on the fs driver) → uploads the original → `POST .../complete` → worker (or inline) strips EXIF, writes AVIF/WebP variants at 150/320/640/1080, blurhash → post becomes visible → fan-out job writes `FeedEntry` rows.

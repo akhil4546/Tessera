@@ -10,6 +10,7 @@ import cookieParser from 'cookie-parser';
 import { json, raw } from 'express';
 import helmet from 'helmet';
 import { Logger } from 'nestjs-pino';
+import { assertJwtSecrets } from './auth/jwt-secrets.js';
 import { AppModule } from './app.module.js';
 import { HttpErrorFilter } from './common/http-filter.js';
 import { RedisIoAdapter } from './inbox/redis-io.adapter.js';
@@ -19,6 +20,7 @@ import { initObservability } from './observability.js';
 import type { NextFunction, Request, Response } from 'express';
 
 async function bootstrap() {
+  assertJwtSecrets(process.env);
   initObservability();
 
   const app = await NestFactory.create(AppModule, { bufferLogs: true, rawBody: true, bodyParser: false });
@@ -90,4 +92,7 @@ async function bootstrap() {
   await app.listen(port);
 }
 
-bootstrap();
+bootstrap().catch((error: unknown) => {
+  console.error(error);
+  process.exit(1);
+});

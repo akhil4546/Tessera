@@ -25,6 +25,8 @@ jobs:
     env:
       DATABASE_URL: postgresql://tessera:tessera@localhost:5432/tessera
       JWT_ACCESS_SECRET: ci-test-secret-must-be-at-least-32-chars
+      JWT_ADMIN_SECRET: ci-admin-secret-must-be-at-least-32-chars
+      JWT_PURPOSE_SECRET: ci-purpose-secret-must-be-at-least-32-chars
       TOTP_ENCRYPTION_KEY: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
       WEB_ORIGIN: http://127.0.0.1:3100
       COOKIE_SECURE: 'false'
