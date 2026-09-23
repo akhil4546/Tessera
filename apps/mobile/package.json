@@ -10,7 +10,7 @@
     "ios": "expo start --ios",
     "typecheck": "tsc --noEmit",
     "test": "echo \"no mobile tests in Phase 2\"",
-    "lint": "echo \"lint: @tessera/mobile\""
+    "lint": "pnpm --dir ../.. exec eslint --max-warnings 0 apps/mobile"
   },
   "dependencies": {
     "@tessera/api-client": "workspace:*",

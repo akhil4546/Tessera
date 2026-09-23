@@ -8,7 +8,7 @@
     "start": "next start --port 3002",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "echo \"admin coverage is API integration + the authenticated UI\"",
-    "lint": "echo \"lint: @tessera/admin\""
+    "lint": "pnpm --dir ../.. exec eslint --max-warnings 0 apps/admin"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.87.4",

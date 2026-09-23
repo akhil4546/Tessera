@@ -13,7 +13,7 @@
     "build": "tsc -p tsconfig.json --noEmit",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
-    "lint": "echo \"lint: @tessera/i18n\""
+    "lint": "pnpm --dir ../.. exec eslint --max-warnings 0 packages/i18n"
   },
   "devDependencies": {
     "typescript": "catalog:",

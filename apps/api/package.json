@@ -9,7 +9,7 @@
     "start": "tsx src/main.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
-    "lint": "echo \"lint: @tessera/api\""
+    "lint": "pnpm --dir ../.. exec eslint --max-warnings 0 apps/api"
   },
   "dependencies": {
     "@nestjs/common": "^11.1.6",

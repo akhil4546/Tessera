@@ -9,7 +9,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "echo \"web unit tests live in packages/ui; e2e via pnpm e2e\"",
     "e2e": "playwright test",
-    "lint": "echo \"lint: @tessera/web\""
+    "lint": "pnpm --dir ../.. exec eslint --max-warnings 0 apps/web"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.87.4",

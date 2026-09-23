@@ -15,7 +15,7 @@
     "build": "prisma generate",
     "typecheck": "prisma generate && tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
-    "lint": "echo \"lint: @tessera/db\"",
+    "lint": "pnpm --dir ../.. exec eslint --max-warnings 0 packages/db",
     "migrate": "prisma migrate dev",
     "migrate:deploy": "prisma migrate deploy",
     "studio": "prisma studio"

@@ -3,8 +3,8 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "lint": "echo \"lint: @tessera/config\"",
-    "test": "echo \"no tests in @tessera/config\"",
+    "lint": "pnpm --dir ../.. exec eslint --max-warnings 0 packages/config",
+    "test": "node --test eslint.config.test.mjs",
     "typecheck": "echo \"no ts sources in @tessera/config\"",
     "build": "echo \"@tessera/config is JSON only\""
   },

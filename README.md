@@ -103,10 +103,12 @@ CI and Playwright use `STORAGE_DRIVER=fs` and `MEDIA_PROCESS=inline` so they do 
 | --- | --- |
 | `pnpm dev` | Turbo dev for web, api, worker, admin |
 | `pnpm build` | Production builds |
-| `pnpm lint` / `typecheck` / `test` | Quality gates |
+| `pnpm lint` / `typecheck` / `test` | ESLint, TypeScript, and Vitest |
 | `pnpm compose:up` / `compose:down` | Docker infra |
 | `pnpm db:generate` / `pnpm db:migrate` / `pnpm db:deploy` | Prisma 7 client and migrations |
 | `pnpm seed` | Identity through organisation, plus reports, restrict, admin, Iris (minor) |
+
+`pnpm lint` runs ESLint 9 from the repo root in every workspace, type-aware, with `--max-warnings 0`. `apps/web`, `apps/admin`, and `packages/ui` also run `eslint-plugin-react-hooks` and `eslint-plugin-jsx-a11y`. `import/no-restricted-paths` rejects an import from `apps/*` inside `packages/*`. `apps/api` keeps the Nest async rules on, so a floating or misused promise fails lint.
 
 The API and worker run with `tsx` (TypeScript source, including workspace packages). Prisma stays on **7.10**, not 8.
 
