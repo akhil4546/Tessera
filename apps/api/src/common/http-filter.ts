@@ -30,9 +30,9 @@ export class HttpErrorFilter implements ExceptionFilter {
         typeof raw === 'string'
           ? raw
           : typeof raw === 'object' && raw && 'message' in raw
-            ? Array.isArray((raw as { message: unknown }).message)
+            ? Array.isArray(raw.message)
               ? String((raw as { message: string[] }).message[0])
-              : String((raw as { message: unknown }).message)
+              : String(raw.message)
             : exception.message;
       res.status(status).json({
         error: {

@@ -137,11 +137,11 @@ export class NotificationsService implements OnModuleInit {
       ? await this.prisma.notification.update({
           where: { id: existing.id },
           data: {
-            actorIds: actorIds as Prisma.InputJsonValue,
+            actorIds: actorIds,
             actorCount,
             preview: input.preview ?? existing.preview,
             href,
-            payload: payload as Prisma.InputJsonValue,
+            payload: payload,
             readAt: inApp ? null : existing.readAt,
             updatedAt: now,
           },
@@ -151,13 +151,13 @@ export class NotificationsService implements OnModuleInit {
             recipientId: input.recipientId,
             kind: input.kind,
             aggregateKey,
-            actorIds: actorIds as Prisma.InputJsonValue,
+            actorIds: actorIds,
             actorCount: Math.max(actorCount, input.actorId ? 1 : 0),
             targetType: input.targetType ?? null,
             targetId: input.targetId ?? null,
             preview: input.preview ?? null,
             href,
-            payload: payload as Prisma.InputJsonValue,
+            payload: payload,
             readAt: inApp ? null : now,
           },
         });
@@ -269,7 +269,7 @@ export class NotificationsService implements OnModuleInit {
     const row = await this.prisma.notificationPreference.update({
       where: { userId },
       data: {
-        channels: merged.channels as Prisma.InputJsonValue,
+        channels: merged.channels,
         quietHoursEnabled: input.quietHoursEnabled ?? merged.quietHoursEnabled,
         quietHoursStartMinutes: input.quietHoursStartMinutes ?? merged.quietHoursStartMinutes,
         quietHoursEndMinutes: input.quietHoursEndMinutes ?? merged.quietHoursEndMinutes,
@@ -393,7 +393,7 @@ export class NotificationsService implements OnModuleInit {
     return this.prisma.notificationPreference.create({
       data: {
         userId,
-        channels: defaults.channels as Prisma.InputJsonValue,
+        channels: defaults.channels,
         quietHoursEnabled: defaults.quietHoursEnabled,
         quietHoursStartMinutes: defaults.quietHoursStartMinutes,
         quietHoursEndMinutes: defaults.quietHoursEndMinutes,

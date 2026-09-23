@@ -444,8 +444,8 @@ export class MomentsService {
       }
       await this.prisma.momentStickerResponse.upsert({
         where: { stickerId_userId: { stickerId, userId } },
-        create: { stickerId, userId, payload: { optionIndex: payload.optionIndex } as Prisma.InputJsonValue },
-        update: { payload: { optionIndex: payload.optionIndex } as Prisma.InputJsonValue },
+        create: { stickerId, userId, payload: { optionIndex: payload.optionIndex } },
+        update: { payload: { optionIndex: payload.optionIndex } },
       });
     } else if (sticker.kind === 'question') {
       if (!payload.text?.trim()) {
@@ -453,8 +453,8 @@ export class MomentsService {
       }
       await this.prisma.momentStickerResponse.upsert({
         where: { stickerId_userId: { stickerId, userId } },
-        create: { stickerId, userId, payload: { text: payload.text.trim() } as Prisma.InputJsonValue },
-        update: { payload: { text: payload.text.trim() } as Prisma.InputJsonValue },
+        create: { stickerId, userId, payload: { text: payload.text.trim() } },
+        update: { payload: { text: payload.text.trim() } },
       });
     } else {
       throw new TesseraHttpError(400, 'VALIDATION', 'That sticker does not take a response.');
@@ -722,7 +722,7 @@ export class MomentsService {
     if (sticker.kind === 'mention') {
       return { handle: sticker.payload.handle.replace(/^@/, '').toLowerCase() };
     }
-    return sticker.payload as Record<string, unknown>;
+    return sticker.payload;
   }
 
   private async assertSticker(

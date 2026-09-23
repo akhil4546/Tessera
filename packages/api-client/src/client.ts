@@ -761,7 +761,7 @@ export function createClient(options: CreateClientOptions): TesseraClient {
     },
     async search(q, tab = 'all') {
       const params = new URLSearchParams({ q, tab });
-      return (await request(`/v1/search?${params}`)) as SearchResults;
+      return (await request(`/v1/search?${params.toString()}`)) as SearchResults;
     },
     async recentSearches() {
       return (await request('/v1/search/recent')) as { items: RecentSearchView[] };
@@ -961,7 +961,7 @@ export function createClient(options: CreateClientOptions): TesseraClient {
     },
     async inboxPresence(handles) {
       const params = new URLSearchParams({ handles: handles.join(',') });
-      return (await request(`/v1/inbox/presence?${params}`)) as {
+      return (await request(`/v1/inbox/presence?${params.toString()}`)) as {
         items: { handle: string; online: boolean }[];
       };
     },

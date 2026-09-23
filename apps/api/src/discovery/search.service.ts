@@ -19,6 +19,12 @@ export type RawSearchHits = {
   boardIds: string[];
 };
 
+function hitText(value: unknown): string {
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+  return '';
+}
+
 @Injectable()
 export class SearchService implements OnModuleInit {
   private readonly log = new Logger(SearchService.name);
@@ -31,7 +37,9 @@ export class SearchService implements OnModuleInit {
     if (this.meiliReady) {
       this.log.log('Meilisearch indexes ready (people, hashtags, places, captions, boards).');
     } else {
-      this.log.warn('SOFT-FAIL: Meilisearch is down or unset. Search uses Postgres (no typo tolerance).');
+      this.log.warn(
+        'SOFT-FAIL: Meilisearch is down or unset. Search uses Postgres (no typo tolerance).',
+      );
     }
   }
 
@@ -55,7 +63,7 @@ export class SearchService implements OnModuleInit {
         return {
           engine,
           peopleIds: people.map((hit) => hit.id),
-          hashtagTags: hashtags.map((hit) => String(hit.tag ?? hit.id)),
+          hashtagTags: hashtags.map((hit) => hitText(hit.tag) || hitText(hit.id)),
           placeIds: places.map((hit) => hit.id),
           postIds: captions.map((hit) => hit.id),
           boardIds: boards.map((hit) => hit.id),
@@ -131,7 +139,12 @@ export class SearchService implements OnModuleInit {
           archivedAt: null,
           visibility: 'public',
           caption: { contains: term, mode: 'insensitive' },
-          author: { deactivatedAt: null, suspendedAt: null, isMinor: false, profile: { is: { isPrivate: false } } },
+          author: {
+            deactivatedAt: null,
+            suspendedAt: null,
+            isMinor: false,
+            profile: { is: { isPrivate: false } },
+          },
         },
         take: limit,
         orderBy: { publishedAt: 'desc' },

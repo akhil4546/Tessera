@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import { type FormEvent, useEffect, useState } from 'react';
+import { type FormEvent, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { TesseraApiError } from '@tessera/api-client';
 import { Button, TextArea, TextField, Tile } from '@tessera/ui';
@@ -31,30 +31,36 @@ export default function SettingsPage() {
   const [memoryMapEnabled, setMemoryMapEnabled] = useState(true);
   const [momentArchiveEnabled, setMomentArchiveEnabled] = useState(false);
   const [loopsBudgetMinutes, setLoopsBudgetMinutes] = useState<number | null>(null);
-  const [defaultAppreciation, setDefaultAppreciation] = useState<'inspiring' | 'funny' | 'love' | 'useful'>('love');
+  const [defaultAppreciation, setDefaultAppreciation] = useState<
+    'inspiring' | 'funny' | 'love' | 'useful'
+  >('love');
   const [activityStatusEnabled, setActivityStatusEnabled] = useState(true);
   const [readReceiptsEnabled, setReadReceiptsEnabled] = useState(true);
-  const [whoCanMessage, setWhoCanMessage] = useState<'everyone' | 'followers' | 'nobody'>('everyone');
-
-  useEffect(() => {
-    if (!me.data) return;
-    setDisplayName(me.data.displayName);
-    setBio(me.data.bio);
-    setPronouns(me.data.pronouns ?? '');
-    setHandle(me.data.handle);
-    setIsPrivate(me.data.isPrivate);
-    setMemoryMapEnabled(me.data.memoryMapEnabled ?? true);
-    setMomentArchiveEnabled(me.data.momentArchiveEnabled ?? false);
-    setDefaultAppreciation(me.data.defaultAppreciation ?? 'love');
-    setActivityStatusEnabled(me.data.activityStatusEnabled ?? true);
-    setReadReceiptsEnabled(me.data.readReceiptsEnabled ?? true);
-    setWhoCanMessage(me.data.whoCanMessage ?? 'everyone');
-  }, [me.data]);
-
-  useEffect(() => {
-    if (!wellbeing.data) return;
-    setLoopsBudgetMinutes(wellbeing.data.loopsBudgetMinutes);
-  }, [wellbeing.data]);
+  const [whoCanMessage, setWhoCanMessage] = useState<'everyone' | 'followers' | 'nobody'>(
+    'everyone',
+  );
+  const profile = me.data;
+  const [seenProfile, setSeenProfile] = useState(profile);
+  if (profile && profile !== seenProfile) {
+    setSeenProfile(profile);
+    setDisplayName(profile.displayName);
+    setBio(profile.bio);
+    setPronouns(profile.pronouns ?? '');
+    setHandle(profile.handle);
+    setIsPrivate(profile.isPrivate);
+    setMemoryMapEnabled(profile.memoryMapEnabled ?? true);
+    setMomentArchiveEnabled(profile.momentArchiveEnabled ?? false);
+    setDefaultAppreciation(profile.defaultAppreciation ?? 'love');
+    setActivityStatusEnabled(profile.activityStatusEnabled ?? true);
+    setReadReceiptsEnabled(profile.readReceiptsEnabled ?? true);
+    setWhoCanMessage(profile.whoCanMessage ?? 'everyone');
+  }
+  const budget = wellbeing.data;
+  const [seenBudget, setSeenBudget] = useState(budget);
+  if (budget && budget !== seenBudget) {
+    setSeenBudget(budget);
+    setLoopsBudgetMinutes(budget.loopsBudgetMinutes);
+  }
 
   const save = useMutation({
     mutationFn: async () => {
@@ -107,7 +113,9 @@ export default function SettingsPage() {
 
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-6">
-      <p className="text-xs font-medium uppercase tracking-[0.18em] text-slate">{t('settings.title')}</p>
+      <p className="text-xs font-medium uppercase tracking-[0.18em] text-slate">
+        {t('settings.title')}
+      </p>
       <nav className="flex flex-wrap gap-3 text-sm">
         <Link className="underline" href="/settings/security">
           {t('settings.security')}
@@ -139,10 +147,32 @@ export default function SettingsPage() {
       </nav>
       <Tile>
         <form className="flex flex-col gap-4" onSubmit={onSubmit}>
-          <TextField name="displayName" label={t('auth.displayName')} value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
-          <TextField name="handle" label={t('auth.handle')} value={handle} onChange={(e) => setHandle(e.target.value)} hint={t('settings.handleHint')} />
-          <TextArea name="bio" label={t('settings.bio')} value={bio} onChange={(e) => setBio(e.target.value)} maxLength={500} />
-          <TextField name="pronouns" label={t('settings.pronouns')} value={pronouns} onChange={(e) => setPronouns(e.target.value)} />
+          <TextField
+            name="displayName"
+            label={t('auth.displayName')}
+            value={displayName}
+            onChange={(e) => setDisplayName(e.target.value)}
+          />
+          <TextField
+            name="handle"
+            label={t('auth.handle')}
+            value={handle}
+            onChange={(e) => setHandle(e.target.value)}
+            hint={t('settings.handleHint')}
+          />
+          <TextArea
+            name="bio"
+            label={t('settings.bio')}
+            value={bio}
+            onChange={(e) => setBio(e.target.value)}
+            maxLength={500}
+          />
+          <TextField
+            name="pronouns"
+            label={t('settings.pronouns')}
+            value={pronouns}
+            onChange={(e) => setPronouns(e.target.value)}
+          />
           <label className="flex min-h-11 flex-col gap-1 text-sm">
             <span className="font-medium">Default Appreciation (double-tap)</span>
             <select
@@ -157,7 +187,12 @@ export default function SettingsPage() {
             </select>
           </label>
           <label className="flex min-h-11 items-center gap-3 text-sm">
-            <input type="checkbox" checked={isPrivate} onChange={(e) => setIsPrivate(e.target.checked)} className="size-5 accent-[var(--tessera-accent)]" />
+            <input
+              type="checkbox"
+              checked={isPrivate}
+              onChange={(e) => setIsPrivate(e.target.checked)}
+              className="size-5 accent-[var(--tessera-accent)]"
+            />
             <span>
               <span className="font-medium">{t('settings.privateLabel')}</span>
               <span className="block text-text-secondary">{t('settings.privateHint')}</span>
@@ -230,7 +265,9 @@ export default function SettingsPage() {
             <select
               className="min-h-11 rounded-tile border border-border bg-surface-elevated px-3"
               value={loopsBudgetMinutes ?? ''}
-              onChange={(e) => setLoopsBudgetMinutes(e.target.value ? Number(e.target.value) : null)}
+              onChange={(e) =>
+                setLoopsBudgetMinutes(e.target.value ? Number(e.target.value) : null)
+              }
             >
               <option value="">{t('settings.loopsBudgetOff')}</option>
               {[15, 30, 45, 60, 90, 120].map((minutes) => (

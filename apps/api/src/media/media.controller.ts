@@ -39,7 +39,7 @@ export class MediaController {
   @UseGuards(AuthGuard)
   @ApiConsumes('application/octet-stream', 'image/jpeg', 'image/png', 'image/webp', 'video/mp4')
   async bytes(@CurrentUser() user: RequestUser, @Param('id') id: string, @Req() req: Request) {
-    const existing = req.body;
+    const existing = req.body as unknown;
     let body: Buffer;
     if (Buffer.isBuffer(existing)) {
       body = existing;
@@ -78,7 +78,11 @@ export class MediaController {
     }
     const token = verifyFsMediaToken(decoded, exp, sig);
     if (!token.ok) {
-      throw new TesseraHttpError(403, 'MEDIA_URL_INVALID', 'This media link is invalid or expired.');
+      throw new TesseraHttpError(
+        403,
+        'MEDIA_URL_INVALID',
+        'This media link is invalid or expired.',
+      );
     }
     const file = await this.media.readFile(decoded, token.exp);
     res.setHeader('Content-Type', file.contentType);

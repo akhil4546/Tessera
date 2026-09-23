@@ -16,6 +16,13 @@ type ResponseLike = {
   json: (body: unknown) => ResponseLike;
 };
 
+function textArg(value: unknown): string {
+  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+    return String(value);
+  }
+  throw new Error('unexpected redis arg');
+}
+
 function retryHeader(err: unknown): string | undefined {
   if (!err || typeof err !== 'object' || !('headers' in err)) return undefined;
   const headers = (err as { headers?: Record<string, string> }).headers;
@@ -85,17 +92,17 @@ function installRedisDouble() {
     return bucket;
   };
 
-  vi.spyOn(Redis.prototype, 'on').mockImplementation((function on(
+  vi.spyOn(Redis.prototype, 'on').mockImplementation(function on(
     this: Redis,
     event: string | symbol,
     listener: (...args: unknown[]) => void,
   ) {
-    if (event === 'error') errorHandlers.push(listener as (err: Error) => void);
+    if (event === 'error') errorHandlers.push(listener);
     return this;
-  }) as never);
+  } as never);
   vi.spyOn(Redis.prototype, 'connect').mockResolvedValue();
   vi.spyOn(Redis.prototype, 'disconnect').mockImplementation(() => undefined);
-  vi.spyOn(Redis.prototype, 'incr').mockImplementation(async (key) => {
+  vi.spyOn(Redis.prototype, 'incr').mockImplementation((key) => {
     commands.push('incr');
     if (failNext > 0) {
       failNext -= 1;
@@ -103,30 +110,30 @@ function installRedisDouble() {
     }
     const bucket = bucketFor(String(key));
     bucket.count += 1;
-    return bucket.count;
+    return Promise.resolve(bucket.count);
   });
-  vi.spyOn(Redis.prototype, 'expire').mockImplementation(async (key, seconds) => {
+  vi.spyOn(Redis.prototype, 'expire').mockImplementation((key, seconds) => {
     commands.push('expire');
     bucketFor(String(key)).ttlMs = Number(seconds) * 1000;
-    return 1;
+    return Promise.resolve(1);
   });
-  vi.spyOn(Redis.prototype, 'eval').mockImplementation((async (...args: unknown[]) => {
+  vi.spyOn(Redis.prototype, 'eval').mockImplementation((...args: unknown[]) => {
     commands.push('eval');
-    lastScript = String(args[0]);
+    lastScript = textArg(args[0]);
     if (Number(args[1]) !== 1 || args[2] === undefined || args[3] === undefined) {
       throw new Error(`unexpected eval args: ${args.length}`);
     }
-    lastWindowMs = String(args[3]);
+    lastWindowMs = textArg(args[3]);
     if (failNext > 0) {
       failNext -= 1;
       throw new Error('connection reset');
     }
-    const bucket = bucketFor(String(args[2]));
+    const bucket = bucketFor(textArg(args[2]));
     bucket.count += 1;
-    const windowMs = Number(args[3]);
+    const windowMs = Number(textArg(args[3]));
     if (bucket.ttlMs < 0) bucket.ttlMs = windowMs;
-    return [bucket.count, bucket.ttlMs];
-  }) as typeof Redis.prototype.eval);
+    return Promise.resolve([bucket.count, bucket.ttlMs]);
+  });
 
   return {
     commands,

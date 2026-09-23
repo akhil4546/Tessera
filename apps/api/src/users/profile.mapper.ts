@@ -41,16 +41,11 @@ type UserRow = {
 function asLinks(value: unknown): ProfileLink[] {
   if (!Array.isArray(value)) return [];
   const links: ProfileLink[] = [];
-  for (const item of value) {
-    if (
-      item &&
-      typeof item === 'object' &&
-      'title' in item &&
-      'url' in item &&
-      typeof item.title === 'string' &&
-      typeof item.url === 'string'
-    ) {
-      links.push({ title: item.title, url: item.url });
+  for (const item of value as unknown[]) {
+    if (!item || typeof item !== 'object') continue;
+    const record = item as { title?: unknown; url?: unknown };
+    if (typeof record.title === 'string' && typeof record.url === 'string') {
+      links.push({ title: record.title, url: record.url });
     }
   }
   return links.slice(0, 3);

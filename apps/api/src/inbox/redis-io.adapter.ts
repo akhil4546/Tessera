@@ -1,6 +1,6 @@
 import { IoAdapter } from '@nestjs/platform-socket.io';
 import { createAdapter } from '@socket.io/redis-adapter';
-import type { ServerOptions } from 'socket.io';
+import type { Server, ServerOptions } from 'socket.io';
 import { Redis } from 'ioredis';
 import { Logger } from '@nestjs/common';
 
@@ -22,7 +22,9 @@ export class RedisIoAdapter extends IoAdapter {
       const pub = new Redis(url, { maxRetriesPerRequest: 1, lazyConnect: true });
       const sub = pub.duplicate();
       pub.on('error', (err) => {
-        this.log.warn(`SOFT-FAIL: Redis socket adapter (${err.message}). Falling back to in-process.`);
+        this.log.warn(
+          `SOFT-FAIL: Redis socket adapter (${err.message}). Falling back to in-process.`,
+        );
       });
       await Promise.all([pub.connect(), sub.connect()]);
       this.adapterConstructor = createAdapter(pub, sub);
@@ -33,8 +35,8 @@ export class RedisIoAdapter extends IoAdapter {
     }
   }
 
-  override createIOServer(port: number, options?: ServerOptions) {
-    const server = super.createIOServer(port, options);
+  override createIOServer(port: number, options?: ServerOptions): Server {
+    const server = super.createIOServer(port, options) as Server;
     if (this.adapterConstructor) {
       server.adapter(this.adapterConstructor);
     }

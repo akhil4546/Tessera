@@ -116,7 +116,9 @@ export class RateLimitService implements OnModuleDestroy {
       try {
         if (redis.status === 'wait' || redis.status === 'end') await redis.connect();
         const windowMs = Math.max(1, Math.round(windowSeconds * 1000));
-        const { count, ttlMs } = readEval(await redis.eval(RATE_LIMIT_LUA, 1, key, String(windowMs)));
+        const { count, ttlMs } = readEval(
+          await redis.eval(RATE_LIMIT_LUA, 1, key, String(windowMs)),
+        );
         this.recoverRedis();
         if (count > limit) throw rateLimited(ttlMs > 0 ? ttlMs : windowMs);
         return;
@@ -142,10 +144,11 @@ export class RateLimitService implements OnModuleDestroy {
     if (current.count > limit) throw rateLimited(current.resetAt - now);
   }
 
-  async onModuleDestroy(): Promise<void> {
+  onModuleDestroy(): Promise<void> {
     if (this.redis) {
       this.redis.disconnect();
       this.redis = null;
     }
+    return Promise.resolve();
   }
 }

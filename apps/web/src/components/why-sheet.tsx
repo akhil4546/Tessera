@@ -16,15 +16,18 @@ export function WhySheet({
 }) {
   const t = useTranslations();
   return (
-    <div
-      className="fixed inset-0 z-40 flex items-end justify-center bg-[var(--tessera-overlay)] p-4 sm:items-center"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="why-title"
-      onClick={onClose}
-    >
+    <div className="fixed inset-0 z-40 flex items-end justify-center bg-[var(--tessera-overlay)] p-4 sm:items-center">
+      <button
+        type="button"
+        className="absolute inset-0 cursor-default"
+        aria-label={t('moment.close')}
+        onClick={onClose}
+      />
       <Tile
-        className="max-h-[80vh] w-full max-w-lg overflow-auto"
+        className="relative z-10 max-h-[80vh] w-full max-w-lg overflow-auto"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="why-title"
         onClick={(event: MouseEvent) => event.stopPropagation()}
       >
         <div className="flex items-start justify-between gap-4">
@@ -34,7 +37,11 @@ export function WhySheet({
             </h2>
             <p className="mt-1 text-sm text-text-secondary">Score {score.toFixed(2)}</p>
           </div>
-          <button type="button" className="min-h-11 px-3 text-sm text-accent underline" onClick={onClose}>
+          <button
+            type="button"
+            className="min-h-11 px-3 text-sm text-accent underline"
+            onClick={onClose}
+          >
             {t('moment.close')}
           </button>
         </div>
@@ -43,11 +50,14 @@ export function WhySheet({
         ) : (
           <ul className="mt-4 flex flex-col gap-3">
             {signals.map((signal) => (
-              <li key={`${signal.key}-${signal.label}`} className="rounded-tile border border-border p-3">
+              <li
+                key={`${signal.key}-${signal.label}`}
+                className="rounded-tile border border-border p-3"
+              >
                 <p className="font-medium text-text-primary">{signal.label}</p>
                 <p className="mt-1 text-sm text-text-secondary">
-                  {signal.key} · weight {signal.weight.toFixed(2)} · value {signal.value.toFixed(2)} ·{' '}
-                  {t('discover.contribution')} {signal.contribution.toFixed(2)}
+                  {signal.key} · weight {signal.weight.toFixed(2)} · value {signal.value.toFixed(2)}{' '}
+                  · {t('discover.contribution')} {signal.contribution.toFixed(2)}
                 </p>
               </li>
             ))}

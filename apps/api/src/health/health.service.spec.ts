@@ -14,8 +14,8 @@ function restoreEnv(name: 'REDIS_URL' | 'MEILI_HOST' | 'MEILI_API_KEY', value: s
 }
 
 function service(opts?: { query?: () => Promise<unknown>; probe?: () => Promise<void> }) {
-  const query = vi.fn(opts?.query ?? (async () => [{ ok: 1 }]));
-  const probe = vi.fn(opts?.probe ?? (async () => undefined));
+  const query = vi.fn(opts?.query ?? (() => Promise.resolve([{ ok: 1 }])));
+  const probe = vi.fn(opts?.probe ?? (() => Promise.resolve()));
   const prisma = { $queryRaw: query } as unknown as PrismaService;
   const storage = { probe } as unknown as StorageService;
   return { health: new HealthService(prisma, storage), query, probe };
@@ -68,7 +68,7 @@ describe('HealthService readiness', () => {
     for (const check of Object.values(body.checks)) {
       expect(check.latencyMs).toBeGreaterThanOrEqual(0);
     }
-    await health.onModuleDestroy();
+    health.onModuleDestroy();
   });
 
   it('is ok only when every check succeeds', async () => {
@@ -79,7 +79,9 @@ describe('HealthService readiness', () => {
     vi.spyOn(Redis.prototype, 'ping').mockResolvedValue('PONG');
     vi.stubGlobal(
       'fetch',
-      vi.fn(async () => new Response(JSON.stringify({ status: 'available' }), { status: 200 })),
+      vi.fn(() =>
+        Promise.resolve(new Response(JSON.stringify({ status: 'available' }), { status: 200 })),
+      ),
     );
     const { health } = service();
 
@@ -90,7 +92,7 @@ describe('HealthService readiness', () => {
     expect(body.checks.redis.status).toBe('ok');
     expect(body.checks.storage.status).toBe('ok');
     expect(body.checks.search.status).toBe('ok');
-    await health.onModuleDestroy();
+    health.onModuleDestroy();
   });
 
   it('is down when postgres or storage fails, and degraded when a configured optional dep fails', async () => {
@@ -102,12 +104,10 @@ describe('HealthService readiness', () => {
     vi.spyOn(Redis.prototype, 'disconnect').mockImplementation(() => undefined);
     vi.stubGlobal(
       'fetch',
-      vi.fn(async () => new Response('nope', { status: 503 })),
+      vi.fn(() => Promise.resolve(new Response('nope', { status: 503 }))),
     );
     const { health } = service({
-      query: async () => {
-        throw new Error('connection refused');
-      },
+      query: () => Promise.reject(new Error('connection refused')),
     });
 
     const down = await health.getReadiness();
@@ -118,14 +118,12 @@ describe('HealthService readiness', () => {
     expect(down.checks.search.status).toBe('DEGRADED');
 
     const storageDown = await service({
-      probe: async () => {
-        throw new Error('bucket missing');
-      },
+      probe: () => Promise.reject(new Error('bucket missing')),
     }).health.getReadiness();
     expect(storageDown.status).toBe('down');
     expect(storageDown.checks.postgres.status).toBe('ok');
     expect(storageDown.checks.storage.status).toBe('down');
-    await health.onModuleDestroy();
+    health.onModuleDestroy();
   });
 
   it('times out each check on its own instead of waiting for the slowest to finish the others', async () => {
@@ -140,7 +138,8 @@ describe('HealthService readiness', () => {
       vi.fn((_url: string, init?: RequestInit) => {
         return new Promise((_resolve, reject) => {
           init?.signal?.addEventListener('abort', () => {
-            reject(init.signal?.reason ?? new Error('aborted'));
+            const reason = init.signal?.reason as unknown;
+            reject(reason instanceof Error ? reason : new Error('aborted'));
           });
         });
       }),
@@ -161,6 +160,6 @@ describe('HealthService readiness', () => {
     expect(body.checks.redis.status).toBe('DEGRADED');
     expect(body.checks.search.status).toBe('DEGRADED');
     expect(body.checks.postgres.latencyMs).toBeGreaterThanOrEqual(700);
-    await health.onModuleDestroy();
+    health.onModuleDestroy();
   });
 });

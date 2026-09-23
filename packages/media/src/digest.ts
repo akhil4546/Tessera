@@ -1,5 +1,5 @@
 import type { TesseraPrisma } from '@tessera/db';
-import type { NotificationKind, SecurityAlertKind } from '@tessera/types';
+import type { SecurityAlertKind } from '@tessera/types';
 import { digestHourMatches, formatActivityCopy, localDayKey, mergeNotificationPreferences, parseActorIds } from './notifications.ts';
 import type { MediaLogger } from './process-media.ts';
 
@@ -50,7 +50,7 @@ export async function sendNotificationDigests(
           : {};
       lines.push(
         formatActivityCopy({
-          kind: item.kind as NotificationKind,
+          kind: item.kind,
           actors: ordered,
           actorCount: item.actorCount,
           securityKind: (payload.securityKind as SecurityAlertKind | undefined) ?? null,

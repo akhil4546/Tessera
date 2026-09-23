@@ -43,7 +43,10 @@ export default function ThreadPage() {
       if (event.type === 'typing') {
         if (event.conversationId !== params.id) return;
         setTypingHandle(event.handle);
-        window.setTimeout(() => setTypingHandle((current) => (current === event.handle ? null : current)), 3000);
+        window.setTimeout(
+          () => setTypingHandle((current) => (current === event.handle ? null : current)),
+          3000,
+        );
         return;
       }
       if ('conversationId' in event && event.conversationId !== params.id) return;
@@ -83,7 +86,7 @@ export default function ThreadPage() {
     },
   });
 
-  async function onSubmit(event: FormEvent) {
+  function onSubmit(event: FormEvent) {
     event.preventDefault();
     if (!draft.trim()) return;
     if (editingId) {
@@ -94,7 +97,11 @@ export default function ThreadPage() {
   }
 
   async function onAttach(file: File) {
-    const kind = file.type.startsWith('video/') ? 'video' : file.type.startsWith('audio/') ? 'audio' : 'image';
+    const kind = file.type.startsWith('video/')
+      ? 'video'
+      : file.type.startsWith('audio/')
+        ? 'audio'
+        : 'image';
     const intent = await api.createMediaIntent({
       purpose: 'message',
       kind: kind === 'audio' ? 'audio' : kind,
@@ -118,13 +125,15 @@ export default function ThreadPage() {
     return <p className="text-text-secondary">{t('common.loading')}</p>;
   }
 
-  const incoming = conversation.data.request?.status === 'pending' && conversation.data.request.incoming;
-  const waiting = conversation.data.request?.status === 'pending' && !conversation.data.request.incoming;
+  const incoming =
+    conversation.data.request?.status === 'pending' && conversation.data.request.incoming;
+  const waiting =
+    conversation.data.request?.status === 'pending' && !conversation.data.request.incoming;
   const heading =
     conversation.data.kind === 'group'
-      ? conversation.data.title ?? t('inbox.members')
-      : conversation.data.members.find((row) => row.user.id !== me.data?.id)?.user.displayName ??
-        conversation.data.title;
+      ? (conversation.data.title ?? t('inbox.members'))
+      : (conversation.data.members.find((row) => row.user.id !== me.data?.id)?.user.displayName ??
+        conversation.data.title);
 
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-4">
@@ -144,15 +153,20 @@ export default function ThreadPage() {
           <Button
             variant="ghost"
             onClick={() =>
-              api.updateConversation(params.id, { muted: !conversation.data.muted }).then(() =>
-                queryClient.invalidateQueries({ queryKey: ['conversation', params.id] }),
-              )
+              api
+                .updateConversation(params.id, { muted: !conversation.data.muted })
+                .then(() =>
+                  queryClient.invalidateQueries({ queryKey: ['conversation', params.id] }),
+                )
             }
           >
             {conversation.data.muted ? t('inbox.unmute') : t('inbox.mute')}
           </Button>
           {conversation.data.kind === 'group' ? (
-            <Button variant="ghost" onClick={() => api.leaveConversation(params.id).then(() => router.push('/inbox'))}>
+            <Button
+              variant="ghost"
+              onClick={() => api.leaveConversation(params.id).then(() => router.push('/inbox'))}
+            >
               {t('inbox.leave')}
             </Button>
           ) : null}
@@ -163,12 +177,22 @@ export default function ThreadPage() {
       {incoming && conversation.data.request ? (
         <Tile className="flex flex-wrap gap-2">
           <p className="w-full text-sm">{t('inbox.incoming')}</p>
-          <Button onClick={() => api.acceptMessageRequest(conversation.data.request!.id).then(() => conversation.refetch())}>
+          <Button
+            onClick={() =>
+              api
+                .acceptMessageRequest(conversation.data.request!.id)
+                .then(() => conversation.refetch())
+            }
+          >
             {t('inbox.accept')}
           </Button>
           <Button
             variant="secondary"
-            onClick={() => api.declineMessageRequest(conversation.data.request!.id).then(() => router.push('/inbox'))}
+            onClick={() =>
+              api
+                .declineMessageRequest(conversation.data.request!.id)
+                .then(() => router.push('/inbox'))
+            }
           >
             {t('inbox.decline')}
           </Button>
@@ -262,15 +286,20 @@ function MessageBubble({
         <>
           {message.replyTo ? (
             <p className="mb-1 text-xs text-slate">
-              → @{message.replyTo.senderHandle}: {message.replyTo.deleted ? t('inbox.unsent') : message.replyTo.body}
+              → @{message.replyTo.senderHandle}:{' '}
+              {message.replyTo.deleted ? t('inbox.unsent') : message.replyTo.body}
             </p>
           ) : null}
           {message.body ? <p className="whitespace-pre-wrap">{message.body}</p> : null}
           {message.media?.kind === 'image' && message.media.srcset[0] ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={message.media.srcset[0].webp} alt={message.media.altText || ''} className="mt-2 max-h-64 rounded-tile" />
+            <img
+              src={message.media.srcset[0].webp}
+              alt={message.media.altText || ''}
+              className="mt-2 max-h-64 rounded-tile"
+            />
           ) : null}
           {message.media?.audioUrl ? (
+            // eslint-disable-next-line jsx-a11y/media-has-caption -- voice messages have no caption file
             <audio className="mt-2 w-full" controls src={message.media.audioUrl} />
           ) : null}
           {message.media?.hlsUrl ? (
@@ -302,12 +331,23 @@ function MessageBubble({
         </p>
       ) : null}
       {mine && message.receipt ? (
-        <p className="mt-1 text-xs text-slate">{message.receipt.read ? t('inbox.seen') : message.receipt.delivered ? t('inbox.delivered') : ''}</p>
+        <p className="mt-1 text-xs text-slate">
+          {message.receipt.read
+            ? t('inbox.seen')
+            : message.receipt.delivered
+              ? t('inbox.delivered')
+              : ''}
+        </p>
       ) : null}
       {!message.deletedAt ? (
         <div className="mt-2 flex flex-wrap gap-1">
           {QUICK_EMOJIS.map((emoji) => (
-            <button key={emoji} type="button" className="min-h-11 min-w-11 rounded-tile px-2" onClick={() => onReact(emoji)}>
+            <button
+              key={emoji}
+              type="button"
+              className="min-h-11 min-w-11 rounded-tile px-2"
+              onClick={() => onReact(emoji)}
+            >
               {emoji}
             </button>
           ))}

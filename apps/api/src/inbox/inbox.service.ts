@@ -1,5 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma } from '@tessera/db';
 import { canViewMoment, canViewPost, kindsForInboxFilter } from '@tessera/media';
 import type {
   ConversationView,
@@ -11,9 +10,7 @@ import type {
   MessageSharePreview,
   MessageView,
   MessagingPrefs,
-  Paginated,
   PresenceView,
-  WhoCanMessage,
 } from '@tessera/types';
 import { E2E_VERSION_PLAINTEXT, MAX_GROUP_MEMBERS, QUICK_EMOJIS } from '@tessera/types';
 import type {
@@ -419,7 +416,7 @@ export class InboxService {
         kind,
         body: input.body.trim(),
         bodyEncoding: 'plaintext',
-        payload: payload as Prisma.InputJsonValue,
+        payload: payload,
         replyToId: input.replyToId,
         clientId: input.clientId,
         ...(typeof payload.mediaId === 'string'
@@ -722,7 +719,7 @@ export class InboxService {
       targetId: target.id,
       blockedEitherWay: blocked,
       actorIsFollowerOfTarget: actorIsFollower,
-      targetWhoCanMessage: (target.profile?.whoCanMessage ?? 'everyone') as WhoCanMessage,
+      targetWhoCanMessage: (target.profile?.whoCanMessage ?? 'everyone'),
       targetIsMinor: target.isMinor,
     });
     if (decision.type === 'error') {

@@ -79,12 +79,12 @@ function installRedisDouble() {
     event: string | symbol,
     listener: (...args: unknown[]) => void,
   ) {
-    if (event === 'error') errorHandlers.push(listener as (err: Error) => void);
+    if (event === 'error') errorHandlers.push(listener);
     return this;
   } as never);
   vi.spyOn(Redis.prototype, 'connect').mockResolvedValue();
   vi.spyOn(Redis.prototype, 'disconnect').mockImplementation(() => undefined);
-  vi.spyOn(Redis.prototype, 'eval').mockImplementation((async (...raw: unknown[]) => {
+  vi.spyOn(Redis.prototype, 'eval').mockImplementation((...raw: unknown[]) => {
     const script = String(raw[0]);
     const numKeys = Number(raw[1]);
     const keys = raw.slice(2, 2 + numKeys).map(String);
@@ -95,27 +95,27 @@ function installRedisDouble() {
       throw new Error('connection reset');
     }
     if (script.includes('session-cache-read')) {
-      return [readKey(keys[0] ?? ''), readKey(keys[1] ?? '') ?? '0'];
+      return Promise.resolve([readKey(keys[0] ?? ''), readKey(keys[1] ?? '') ?? '0']);
     }
     if (script.includes('session-cache-fill')) {
-      if (readKey(keys[0] ?? '') === '0') return 0;
+      if (readKey(keys[0] ?? '') === '0') return Promise.resolve(0);
       const gen = readKey(keys[1] ?? '') ?? '0';
-      if (gen !== args[0]) return 0;
+      if (gen !== args[0]) return Promise.resolve(0);
       writeKey(keys[0] ?? '', args[1] ?? '', Number(args[2]));
-      return 1;
+      return Promise.resolve(1);
     }
     if (script.includes('session-cache-tombstone')) {
       const ttl = Number(args[0]);
       for (const key of keys) writeKey(key, '0', ttl);
-      return keys.length;
+      return Promise.resolve(keys.length);
     }
     if (script.includes('session-cache-generation')) {
       const next = Number(readKey(keys[0] ?? '') ?? '0') + 1;
       writeKey(keys[0] ?? '', String(next), Number(args[0]));
-      return next;
+      return Promise.resolve(next);
     }
     throw new Error(`unexpected session-cache script: ${script.slice(0, 40)}`);
-  }) as typeof Redis.prototype.eval);
+  });
 
   return {
     evalCalls,
@@ -239,7 +239,7 @@ describe('SessionCache', () => {
           id: 'sid-1',
           userId: 'user-1',
           revokedAt: null,
-          expiresAt: { gt: expect.any(Date) },
+          expiresAt: { gt: expect.any(Date) as Date },
         },
         select: {
           expiresAt: true,

@@ -37,10 +37,10 @@ export type StorageConfig = {
 };
 
 export function resolveStorageConfig(env: NodeJS.ProcessEnv = process.env): StorageConfig {
-  const explicit = env.STORAGE_DRIVER === 'fs' || env.STORAGE_DRIVER === 's3' ? env.STORAGE_DRIVER : undefined;
+  const explicit =
+    env.STORAGE_DRIVER === 'fs' || env.STORAGE_DRIVER === 's3' ? env.STORAGE_DRIVER : undefined;
   const s3Ready = Boolean(env.S3_ENDPOINT && env.S3_ACCESS_KEY && env.S3_SECRET_KEY);
-  const driver: 's3' | 'fs' =
-    explicit ?? (s3Ready ? 's3' : env.NODE_ENV === 'test' ? 'fs' : 's3');
+  const driver: 's3' | 'fs' = explicit ?? (s3Ready ? 's3' : env.NODE_ENV === 'test' ? 'fs' : 's3');
   return {
     driver,
     s3: {
@@ -97,12 +97,12 @@ class FsStorage implements ObjectStorage {
     await unlink(this.resolve(key)).catch(() => undefined);
   }
 
-  async signPut(key: string): Promise<string> {
-    return `fs://local/${key}`;
+  signPut(key: string): Promise<string> {
+    return Promise.resolve(`fs://local/${key}`);
   }
 
-  async signGet(key: string): Promise<string> {
-    return `fs://local/${key}`;
+  signGet(key: string): Promise<string> {
+    return Promise.resolve(`fs://local/${key}`);
   }
 }
 
@@ -112,10 +112,7 @@ class S3Storage implements ObjectStorage {
   private readonly bucket: string;
   private readonly corsOrigins: string[];
 
-  constructor(
-    s3: NonNullable<StorageConfig['s3']>,
-    corsOrigins: string[],
-  ) {
+  constructor(s3: NonNullable<StorageConfig['s3']>, corsOrigins: string[]) {
     this.bucket = s3.bucket;
     this.corsOrigins = corsOrigins;
     this.client = new S3Client({
@@ -172,9 +169,10 @@ class S3Storage implements ObjectStorage {
     return Buffer.from(bytes);
   }
 
-  async delete(key: string): Promise<void> {
+  delete(key: string): Promise<void> {
     // Keep originals for now; worker overwrites variants. No-op delete is fine in Phase 2.
     void key;
+    return Promise.resolve();
   }
 
   async signPut(key: string, contentType: string, expiresSeconds: number): Promise<string> {
@@ -186,16 +184,19 @@ class S3Storage implements ObjectStorage {
   }
 
   async signGet(key: string, expiresSeconds: number): Promise<string> {
-    return getSignedUrl(
-      this.client,
-      new GetObjectCommand({ Bucket: this.bucket, Key: key }),
-      { expiresIn: expiresSeconds },
-    );
+    return getSignedUrl(this.client, new GetObjectCommand({ Bucket: this.bucket, Key: key }), {
+      expiresIn: expiresSeconds,
+    });
   }
 }
 
 /** Local-dev helper so the API can accept the fs:// PUT from tests. */
-export async function putIfFilesystem(storage: ObjectStorage, key: string, body: Buffer, contentType: string): Promise<void> {
+export async function putIfFilesystem(
+  storage: ObjectStorage,
+  key: string,
+  body: Buffer,
+  contentType: string,
+): Promise<void> {
   if (storage.driver === 'fs') {
     await storage.put(key, body, contentType);
   }

@@ -35,7 +35,7 @@ export class HealthService implements OnModuleDestroy {
     return { status: overall(checks), service: SERVICE, checks };
   }
 
-  async onModuleDestroy(): Promise<void> {
+  onModuleDestroy(): void {
     this.dropRedis(this.redis);
   }
 

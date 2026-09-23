@@ -26,7 +26,7 @@ export async function processImage(
   options: {
     crop?: CropAspect;
     filterId?: string;
-    adjustments?: MediaAdjustments | unknown;
+    adjustments?: unknown;
   } = {},
 ): Promise<ProcessedImage> {
   // rotate() applies EXIF orientation; we never copy metadata, so GPS/EXIF is stripped.
@@ -50,7 +50,7 @@ export async function processImage(
   const width = raster.info.width;
   const height = raster.info.height;
   let baked = await sharp(raster.data, {
-    raw: { width, height, channels: raster.info.channels as 1 | 2 | 3 | 4 },
+    raw: { width, height, channels: raster.info.channels },
   })
     .png()
     .toBuffer();
@@ -171,7 +171,9 @@ function clampPositive(n: number): number {
   return Math.min(3, Math.max(0.1, n));
 }
 
-export async function stripExifProof(input: Buffer): Promise<{ hasGps: boolean; hasExif: boolean }> {
+export async function stripExifProof(
+  input: Buffer,
+): Promise<{ hasGps: boolean; hasExif: boolean }> {
   const processed = await sharp(input).rotate().toBuffer();
   const meta = await sharp(processed).metadata();
   return {

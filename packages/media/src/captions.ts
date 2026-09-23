@@ -64,22 +64,22 @@ function parseTimestamp(value: string): number | null {
 
 const skipped: CaptionProvider = {
   name: 'none',
-  async transcribe() {
-    return {
+  transcribe() {
+    return Promise.resolve({
       status: 'skipped',
       reason: 'CAPTIONS_NOT_CONFIGURED',
-    };
+    });
   },
 };
 
 const fixture: CaptionProvider = {
   name: 'fixture',
-  async transcribe({ durationMs }) {
+  transcribe({ durationMs }) {
     const end = Math.max(800, Math.min(durationMs, 2500));
-    return {
+    return Promise.resolve({
       status: 'ready',
       cues: [{ startMs: 0, endMs: end, text: 'Original audio' }],
-    };
+    });
   },
 };
 
@@ -88,11 +88,11 @@ export function resolveCaptionProvider(env: NodeJS.ProcessEnv = process.env): Ca
   if (env.WHISPER_BIN) {
     return {
       name: 'whisper',
-      async transcribe() {
-        return {
+      transcribe() {
+        return Promise.resolve({
           status: 'skipped',
           reason: 'WHISPER_NOT_WIRED',
-        };
+        });
       },
     };
   }

@@ -29,15 +29,25 @@ async function bootstrap() {
   }
 
   setInterval(() => {
-    logger.info(workers ? 'worker heartbeat — processing media and feed jobs' : 'worker heartbeat — idle, no Redis');
+    logger.info(
+      workers
+        ? 'worker heartbeat — processing media and feed jobs'
+        : 'worker heartbeat — idle, no Redis',
+    );
   }, 60_000).unref();
 
   const shutdown = async () => {
     await workers?.close();
     await app.close();
   };
-  process.on('SIGINT', shutdown);
-  process.on('SIGTERM', shutdown);
+  const onSignal = () => {
+    shutdown().catch((error: unknown) => {
+      logger.error({ err: error }, 'Worker shutdown failed');
+      process.exit(1);
+    });
+  };
+  process.on('SIGINT', onSignal);
+  process.on('SIGTERM', onSignal);
 }
 
 bootstrap().catch((error: unknown) => {

@@ -8,6 +8,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { TesseraApiError } from '@tessera/api-client';
 import { Button, TextField, Tile } from '@tessera/ui';
 import { api, oauthUrl } from '../lib/api';
+import { formText } from '../lib/form-text';
 
 function errorMessage(err: unknown): string {
   if (err instanceof TesseraApiError) return err.message;
@@ -58,17 +59,48 @@ export function LoginForm() {
   }
 
   return (
-    <AuthCard title={challenge ? t('auth.twoFactorTitle') : t('auth.loginTitle')} body={challenge ? t('auth.twoFactorBody') : t('auth.loginBody')}>
+    <AuthCard
+      title={challenge ? t('auth.twoFactorTitle') : t('auth.loginTitle')}
+      body={challenge ? t('auth.twoFactorBody') : t('auth.loginBody')}
+    >
       <form className="flex flex-col gap-4" onSubmit={onSubmit}>
         {challenge ? (
           <>
-            <TextField name="code" label={t('auth.code')} value={code} onChange={(e) => setCode(e.target.value)} inputMode="numeric" autoComplete="one-time-code" />
-            <TextField name="recovery" label={t('auth.recoveryCode')} value={recovery} onChange={(e) => setRecovery(e.target.value)} />
+            <TextField
+              name="code"
+              label={t('auth.code')}
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              inputMode="numeric"
+              autoComplete="one-time-code"
+            />
+            <TextField
+              name="recovery"
+              label={t('auth.recoveryCode')}
+              value={recovery}
+              onChange={(e) => setRecovery(e.target.value)}
+            />
           </>
         ) : (
           <>
-            <TextField name="email" label={t('auth.email')} type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
-            <TextField name="password" label={t('auth.password')} type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} />
+            <TextField
+              name="email"
+              label={t('auth.email')}
+              type="email"
+              autoComplete="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+            <TextField
+              name="password"
+              label={t('auth.password')}
+              type="password"
+              autoComplete="current-password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
           </>
         )}
         {error ? <p className="text-sm text-danger">{error}</p> : null}
@@ -105,11 +137,11 @@ export function SignupForm() {
     const form = new FormData(event.currentTarget);
     try {
       await api.register({
-        email: String(form.get('email') ?? ''),
-        password: String(form.get('password') ?? ''),
-        handle: String(form.get('handle') ?? ''),
-        displayName: String(form.get('displayName') ?? ''),
-        dateOfBirth: String(form.get('dateOfBirth') ?? ''),
+        email: formText(form, 'email'),
+        password: formText(form, 'password'),
+        handle: formText(form, 'handle'),
+        displayName: formText(form, 'displayName'),
+        dateOfBirth: formText(form, 'dateOfBirth'),
         client: 'web',
       });
       await queryClient.invalidateQueries({ queryKey: ['me'] });
@@ -124,11 +156,30 @@ export function SignupForm() {
   return (
     <AuthCard title={t('auth.signupTitle')} body={t('auth.signupBody')}>
       <form className="flex flex-col gap-4" onSubmit={onSubmit}>
-        <TextField name="email" label={t('auth.email')} type="email" autoComplete="email" required />
-        <TextField name="password" label={t('auth.password')} type="password" autoComplete="new-password" required hint="At least 10 characters, with letters and numbers." />
+        <TextField
+          name="email"
+          label={t('auth.email')}
+          type="email"
+          autoComplete="email"
+          required
+        />
+        <TextField
+          name="password"
+          label={t('auth.password')}
+          type="password"
+          autoComplete="new-password"
+          required
+          hint="At least 10 characters, with letters and numbers."
+        />
         <TextField name="handle" label={t('auth.handle')} autoComplete="username" required />
         <TextField name="displayName" label={t('auth.displayName')} autoComplete="name" required />
-        <TextField name="dateOfBirth" label={t('auth.dateOfBirth')} type="date" required hint={t('auth.dateOfBirthHint')} />
+        <TextField
+          name="dateOfBirth"
+          label={t('auth.dateOfBirth')}
+          type="date"
+          required
+          hint={t('auth.dateOfBirthHint')}
+        />
         {error ? <p className="text-sm text-danger">{error}</p> : null}
         <Button type="submit" disabled={pending}>
           {t('auth.submitSignup')}
@@ -161,9 +212,9 @@ export function CompleteOauthForm() {
     try {
       await api.completeOauth({
         setupToken,
-        handle: String(form.get('handle') ?? ''),
-        displayName: String(form.get('displayName') ?? ''),
-        dateOfBirth: String(form.get('dateOfBirth') ?? ''),
+        handle: formText(form, 'handle'),
+        displayName: formText(form, 'displayName'),
+        dateOfBirth: formText(form, 'dateOfBirth'),
         client: 'web',
       });
       await queryClient.invalidateQueries({ queryKey: ['me'] });
@@ -180,7 +231,13 @@ export function CompleteOauthForm() {
       <form className="flex flex-col gap-4" onSubmit={onSubmit}>
         <TextField name="handle" label={t('auth.handle')} required />
         <TextField name="displayName" label={t('auth.displayName')} required />
-        <TextField name="dateOfBirth" label={t('auth.dateOfBirth')} type="date" required hint={t('auth.dateOfBirthHint')} />
+        <TextField
+          name="dateOfBirth"
+          label={t('auth.dateOfBirth')}
+          type="date"
+          required
+          hint={t('auth.dateOfBirthHint')}
+        />
         {error ? <p className="text-sm text-danger">{error}</p> : null}
         <Button type="submit" disabled={pending || !setupToken}>
           {t('common.continue')}
@@ -209,7 +266,15 @@ function OauthButtons() {
   );
 }
 
-function AuthCard({ title, body, children }: { title: string; body: string; children: React.ReactNode }) {
+function AuthCard({
+  title,
+  body,
+  children,
+}: {
+  title: string;
+  body: string;
+  children: React.ReactNode;
+}) {
   return (
     <Tile className="mx-auto w-full max-w-md">
       <h1 className="font-display text-3xl font-semibold text-text-primary">{title}</h1>
@@ -228,7 +293,7 @@ export function ForgotForm() {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     try {
-      await api.forgotPassword(String(form.get('email') ?? ''));
+      await api.forgotPassword(formText(form, 'email'));
       setSent(true);
     } catch (err) {
       setError(errorMessage(err));
@@ -261,7 +326,7 @@ export function ResetForm() {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     try {
-      await api.resetPassword(token, String(form.get('password') ?? ''));
+      await api.resetPassword(token, formText(form, 'password'));
       router.push('/login');
     } catch (err) {
       setError(errorMessage(err));

@@ -5,11 +5,13 @@ describe('createClient', () => {
   it('parses a healthy response', async () => {
     const client = createClient({
       baseUrl: 'http://tessera.test',
-      fetch: async () =>
-        new Response(JSON.stringify({ status: 'ok', service: 'tessera-api' }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' },
-        }),
+      fetch: () =>
+        Promise.resolve(
+          new Response(JSON.stringify({ status: 'ok', service: 'tessera-api' }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          }),
+        ),
     });
 
     await expect(client.getHealth()).resolves.toEqual({

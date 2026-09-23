@@ -29,6 +29,10 @@ type SegmentRow = {
   reactions: { userId: string; emoji: string }[];
 };
 
+function stickerText(value: unknown): string {
+  return typeof value === 'string' ? value : '';
+}
+
 export function stickerPayload(value: unknown): Record<string, unknown> {
   if (value && typeof value === 'object' && !Array.isArray(value)) {
     return value as Record<string, unknown>;
@@ -50,7 +54,8 @@ export function toStickerView(
     const options = Array.isArray(payload.options) ? payload.options.map(String) : [];
     const tallies = options.map((text, index) => ({
       text,
-      votes: sticker.responses.filter((row) => stickerPayload(row.payload).optionIndex === index).length,
+      votes: sticker.responses.filter((row) => stickerPayload(row.payload).optionIndex === index)
+        .length,
     }));
     if (isAuthor || mine) {
       summary = { total: sticker.responses.length, options: tallies };
@@ -61,7 +66,7 @@ export function toStickerView(
       ? {
           count: sticker.responses.length,
           answers: sticker.responses.map((row) => ({
-            text: String(stickerPayload(row.payload).text ?? ''),
+            text: stickerText(stickerPayload(row.payload).text),
           })),
         }
       : { count: sticker.responses.length };
@@ -139,7 +144,13 @@ export function toMomentCard(input: {
 }
 
 export function toShelfCard(
-  shelf: { id: string; title: string; sortOrder: number; createdAt: Date; _count?: { items: number } },
+  shelf: {
+    id: string;
+    title: string;
+    sortOrder: number;
+    createdAt: Date;
+    _count?: { items: number };
+  },
   itemCount: number,
   cover: MediaView | null,
 ): ReelShelfCard {
@@ -161,5 +172,7 @@ export function authorPreview(
 }
 
 export function normalizeHashtag(tag: string): string {
-  return parseCaption(`#${tag.replace(/^#/, '')}`).hashtags[0] ?? tag.replace(/^#/, '').toLowerCase();
+  return (
+    parseCaption(`#${tag.replace(/^#/, '')}`).hashtags[0] ?? tag.replace(/^#/, '').toLowerCase()
+  );
 }

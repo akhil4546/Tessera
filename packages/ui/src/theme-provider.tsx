@@ -37,12 +37,13 @@ function resolve(preference: ThemePreference): 'light' | 'dark' {
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [preference, setPreferenceState] = useState<ThemePreference>('system');
   const [resolved, setResolved] = useState<'light' | 'dark'>('light');
-
-  useEffect(() => {
+  const [hydrated, setHydrated] = useState(false);
+  if (!hydrated && typeof window !== 'undefined') {
     const initial = readPreference();
+    setHydrated(true);
     setPreferenceState(initial);
     setResolved(resolve(initial));
-  }, []);
+  }
 
   useEffect(() => {
     document.documentElement.dataset.theme = resolved;

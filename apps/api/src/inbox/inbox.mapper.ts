@@ -21,8 +21,8 @@ export type Payload = {
 export function parsePayload(value: unknown): Payload {
   if (!value || typeof value !== 'object') return {};
   const row = value as Record<string, unknown>;
-  const str = (key: string) => (typeof row[key] === 'string' ? (row[key] as string) : undefined);
-  const num = (key: string) => (typeof row[key] === 'number' ? (row[key] as number) : undefined);
+  const str = (key: string) => (typeof row[key] === 'string' ? row[key] : undefined);
+  const num = (key: string) => (typeof row[key] === 'number' ? row[key] : undefined);
   return {
     mediaId: str('mediaId'),
     postId: str('postId'),

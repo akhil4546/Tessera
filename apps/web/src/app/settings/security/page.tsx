@@ -7,6 +7,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { TesseraApiError } from '@tessera/api-client';
 import { Button, TextField, Tile } from '@tessera/ui';
 import { api } from '../../../lib/api';
+import { formText } from '../../../lib/form-text';
 
 export default function SecurityPage() {
   const t = useTranslations();
@@ -32,7 +33,7 @@ export default function SecurityPage() {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     try {
-      const result = await api.confirmTotp(String(form.get('code') ?? ''));
+      const result = await api.confirmTotp(formText(form, 'code'));
       setCodes(result.recoveryCodes);
       setSecret(null);
       await queryClient.invalidateQueries({ queryKey: ['me'] });
@@ -45,7 +46,7 @@ export default function SecurityPage() {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     try {
-      await api.disableTotp(String(form.get('password') ?? ''), String(form.get('code') ?? ''));
+      await api.disableTotp(formText(form, 'password'), formText(form, 'code'));
       await queryClient.invalidateQueries({ queryKey: ['me'] });
     } catch (err) {
       setError(err instanceof TesseraApiError ? err.message : t('error.body'));

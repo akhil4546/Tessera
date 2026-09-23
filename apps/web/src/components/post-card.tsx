@@ -101,7 +101,7 @@ export function PostCard({ post }: { post: PostCardModel }) {
     },
   });
   const hero = post.media[0];
-  const defaultType = (me.data?.defaultAppreciation ?? 'love') as AppreciationType;
+  const defaultType = (me.data?.defaultAppreciation ?? 'love');
 
   return (
     <Tile className="overflow-hidden p-0">

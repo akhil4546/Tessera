@@ -254,7 +254,7 @@ export class CommentsService {
     const hidden = hiddenByKeyword || hiddenByRestrict;
     const replies: CommentView[] = [];
     for (const reply of row.replies ?? []) {
-      const view = await this.toView(reply as CommentRow, viewerId, postAuthorId);
+      const view = await this.toView(reply, viewerId, postAuthorId);
       if (view) replies.push(view);
     }
     return {

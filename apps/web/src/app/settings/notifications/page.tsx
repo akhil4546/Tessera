@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import { type FormEvent, useEffect, useState } from 'react';
+import { type FormEvent, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { TesseraApiError } from '@tessera/api-client';
 import type { ChannelPref, NotificationKind, NotificationPreferences } from '@tessera/types';
@@ -49,10 +49,11 @@ export default function NotificationSettingsPage() {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pushNote, setPushNote] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (prefs.data) setDraft(prefs.data);
-  }, [prefs.data]);
+  const [seenPrefs, setSeenPrefs] = useState(prefs.data);
+  if (prefs.data && prefs.data !== seenPrefs) {
+    setSeenPrefs(prefs.data);
+    setDraft(prefs.data);
+  }
 
   const save = useMutation({
     mutationFn: async () => {
@@ -150,7 +151,9 @@ export default function NotificationSettingsPage() {
                 type="time"
                 className="min-h-11 rounded-tile border border-border bg-surface-elevated px-3"
                 value={minutesToInput(draft.quietHoursStartMinutes)}
-                onChange={(e) => setDraft({ ...draft, quietHoursStartMinutes: inputToMinutes(e.target.value) })}
+                onChange={(e) =>
+                  setDraft({ ...draft, quietHoursStartMinutes: inputToMinutes(e.target.value) })
+                }
               />
             </label>
             <label className="flex min-h-11 flex-col gap-1 text-sm">
@@ -159,7 +162,9 @@ export default function NotificationSettingsPage() {
                 type="time"
                 className="min-h-11 rounded-tile border border-border bg-surface-elevated px-3"
                 value={minutesToInput(draft.quietHoursEndMinutes)}
-                onChange={(e) => setDraft({ ...draft, quietHoursEndMinutes: inputToMinutes(e.target.value) })}
+                onChange={(e) =>
+                  setDraft({ ...draft, quietHoursEndMinutes: inputToMinutes(e.target.value) })
+                }
               />
             </label>
           </div>
@@ -199,13 +204,19 @@ export default function NotificationSettingsPage() {
                       <td className="py-3 pr-3">
                         <span className="font-medium">{t(KIND_LABEL[kind])}</span>
                         {kind === 'board_invite' ? (
-                          <span className="mt-1 block text-xs text-slate">{t('settings.kindBoardSoon')}</span>
+                          <span className="mt-1 block text-xs text-slate">
+                            {t('settings.kindBoardSoon')}
+                          </span>
                         ) : null}
                         {kind === 'scheduled_post_published' ? (
-                          <span className="mt-1 block text-xs text-slate">{t('settings.kindScheduledSoon')}</span>
+                          <span className="mt-1 block text-xs text-slate">
+                            {t('settings.kindScheduledSoon')}
+                          </span>
                         ) : null}
                         {emailLocked ? (
-                          <span className="mt-1 block text-xs text-slate">{t('settings.securityEmailLocked')}</span>
+                          <span className="mt-1 block text-xs text-slate">
+                            {t('settings.securityEmailLocked')}
+                          </span>
                         ) : null}
                       </td>
                       {(['inApp', 'push', 'email'] as const).map((channel) => (

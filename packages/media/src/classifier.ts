@@ -37,14 +37,14 @@ export const STUB_CLASSIFIER_NOTE =
 export class StubMediaClassifier implements MediaClassifier {
   readonly provider = 'stub';
 
-  async classify(_input: ClassificationInput): Promise<ClassificationResult> {
-    return {
+  classify(_input: ClassificationInput): Promise<ClassificationResult> {
+    return Promise.resolve({
       provider: this.provider,
       labelledStub: true,
       nudity: 'unknown',
       violence: 'unknown',
       note: STUB_CLASSIFIER_NOTE,
-    };
+    });
   }
 }
 
@@ -57,12 +57,12 @@ export class FixtureMediaClassifier implements MediaClassifier {
 
   constructor(private readonly result: Omit<ClassificationResult, 'provider' | 'labelledStub'>) {}
 
-  async classify(_input: ClassificationInput): Promise<ClassificationResult> {
-    return {
+  classify(_input: ClassificationInput): Promise<ClassificationResult> {
+    return Promise.resolve({
       provider: this.provider,
       labelledStub: true,
       ...this.result,
-    };
+    });
   }
 }
 

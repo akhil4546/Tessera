@@ -49,18 +49,14 @@ export class IdempotencyInterceptor implements NestInterceptor {
     const userId = req.user?.id;
     if (!userId) return next.handle();
 
-    const route = idempotencyRoute(
-      method,
-      req.path || req.originalUrl || req.url,
-      req.query as Record<string, unknown>,
-    );
+    const route = idempotencyRoute(method, req.path || req.originalUrl || req.url, req.query);
     const hash = hashIdempotencyBody(req.body);
 
     return from(this.idempotency.begin(userId, key, route, hash)).pipe(
       mergeMap((begun) => {
         if (begun.kind === 'replay') return of(begun.body);
         return next.handle().pipe(
-          mergeMap(async (body) => {
+          mergeMap(async (body: unknown) => {
             try {
               await this.idempotency.complete(
                 userId,

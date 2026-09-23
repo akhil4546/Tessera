@@ -11,8 +11,7 @@ export async function registerExpoPush(): Promise<string | null> {
     const permission = await Notifications.requestPermissionsAsync();
     if (!permission.granted) return 'Push permission was not granted.';
     const projectId =
-      Constants.default.easConfig?.projectId ??
-      (Constants.default.expoConfig?.extra as { eas?: { projectId?: string } } | undefined)?.eas?.projectId;
+      Constants.default.easConfig?.projectId ?? Constants.default.expoConfig?.extra?.eas?.projectId;
     const token = await Notifications.getExpoPushTokenAsync(projectId ? { projectId } : undefined);
     await api.registerDevice({
       platform: 'expo',

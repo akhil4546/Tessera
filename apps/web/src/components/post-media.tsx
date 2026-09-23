@@ -3,7 +3,13 @@
 import type { MediaView } from '@tessera/types';
 import { mediaSrc } from '../lib/media';
 
-export function PostMedia({ item, sizes = '(min-width: 720px) 640px, 100vw' }: { item: MediaView; sizes?: string }) {
+export function PostMedia({
+  item,
+  sizes = '(min-width: 720px) 640px, 100vw',
+}: {
+  item: MediaView;
+  sizes?: string;
+}) {
   const src = item.srcset[item.srcset.length - 1];
   const webp = mediaSrc(src?.webp);
   const avif = mediaSrc(src?.avif);
@@ -19,6 +25,7 @@ export function PostMedia({ item, sizes = '(min-width: 720px) 640px, 100vw' }: {
         aria-label={item.altText || 'Video'}
       >
         <source src={mediaSrc(item.hlsUrl)} type="application/vnd.apple.mpegurl" />
+        <track kind="captions" srcLang="en" label="Captions" />
       </video>
     );
   }
@@ -34,8 +41,18 @@ export function PostMedia({ item, sizes = '(min-width: 720px) 640px, 100vw' }: {
   }
   return (
     <picture>
-      {avif ? <source type="image/avif" srcSet={item.srcset.map((v) => `${mediaSrc(v.avif)} ${v.width}w`).join(', ')} sizes={sizes} /> : null}
-      <source type="image/webp" srcSet={item.srcset.map((v) => `${mediaSrc(v.webp)} ${v.width}w`).join(', ')} sizes={sizes} />
+      {avif ? (
+        <source
+          type="image/avif"
+          srcSet={item.srcset.map((v) => `${mediaSrc(v.avif)} ${v.width}w`).join(', ')}
+          sizes={sizes}
+        />
+      ) : null}
+      <source
+        type="image/webp"
+        srcSet={item.srcset.map((v) => `${mediaSrc(v.webp)} ${v.width}w`).join(', ')}
+        sizes={sizes}
+      />
       <img
         src={webp}
         alt={item.altText || ''}

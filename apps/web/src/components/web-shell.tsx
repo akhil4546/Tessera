@@ -42,8 +42,15 @@ export function WebShell({ children }: { children: ReactNode }) {
       }
     },
   });
+  const onAuthScreen = isAuthPath(pathname);
+  const badge = useQuery({
+    queryKey: ['inbox', 'badge'],
+    queryFn: () => api.inboxBadge(),
+    enabled: Boolean(me.data) && !onAuthScreen,
+    refetchInterval: onAuthScreen ? false : 30_000,
+  });
 
-  if (isAuthPath(pathname)) {
+  if (onAuthScreen) {
     return (
       <div className="min-h-dvh bg-surface text-text-primary">
         <header className="flex items-center justify-between px-4 py-4 md:px-8">
@@ -60,12 +67,6 @@ export function WebShell({ children }: { children: ReactNode }) {
     );
   }
 
-  const badge = useQuery({
-    queryKey: ['inbox', 'badge'],
-    queryFn: () => api.inboxBadge(),
-    enabled: Boolean(me.data),
-    refetchInterval: 30_000,
-  });
   const unread =
     (badge.data?.unreadMessages ?? 0) +
     (badge.data?.pendingRequests ?? 0) +

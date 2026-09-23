@@ -18,7 +18,7 @@ import { NotificationsService } from '../notifications/notifications.service.js'
 import { InboxRealtime } from './inbox.realtime.js';
 import { InboxService } from './inbox.service.js';
 
-type AuthedSocket = Socket & { data: { user?: { id: string; handle: string } } };
+type SocketUser = { id: string; handle: string };
 
 @WebSocketGateway({
   namespace: '/v1/inbox',
@@ -43,24 +43,22 @@ export class InboxGateway implements OnGatewayInit, OnGatewayConnection, OnGatew
     this.notifications.attachRealtime(this.realtime);
   }
 
-  async handleConnection(client: AuthedSocket): Promise<void> {
+  async handleConnection(client: Socket): Promise<void> {
     const user = await this.authenticate(client);
     if (!user) {
       client.disconnect(true);
       return;
     }
-    client.data.user = user;
+    rememberSocketUser(client, user);
     await client.join(`user:${user.id}`);
     await this.inbox.heartbeat(user.id);
   }
 
-  async handleDisconnect(client: AuthedSocket): Promise<void> {
-    void client;
-  }
+  handleDisconnect(_client: Socket): void {}
 
   @SubscribeMessage('join')
-  async join(@ConnectedSocket() client: AuthedSocket, @MessageBody() body: { conversationId?: string }) {
-    const user = client.data.user;
+  async join(@ConnectedSocket() client: Socket, @MessageBody() body: { conversationId?: string }) {
+    const user = socketUser(client);
     if (!user || !body?.conversationId) return { ok: false };
     try {
       await this.inbox.get(user.id, body.conversationId);
@@ -72,14 +70,17 @@ export class InboxGateway implements OnGatewayInit, OnGatewayConnection, OnGatew
   }
 
   @SubscribeMessage('leave')
-  async leave(@ConnectedSocket() client: AuthedSocket, @MessageBody() body: { conversationId?: string }) {
+  async leave(@ConnectedSocket() client: Socket, @MessageBody() body: { conversationId?: string }) {
     if (body?.conversationId) await client.leave(`conversation:${body.conversationId}`);
     return { ok: true };
   }
 
   @SubscribeMessage('typing')
-  async typing(@ConnectedSocket() client: AuthedSocket, @MessageBody() body: { conversationId?: string }) {
-    const user = client.data.user;
+  async typing(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() body: { conversationId?: string },
+  ) {
+    const user = socketUser(client);
     if (!user || !body?.conversationId) return { ok: false };
     try {
       const conversation = await this.inbox.get(user.id, body.conversationId);
@@ -96,8 +97,8 @@ export class InboxGateway implements OnGatewayInit, OnGatewayConnection, OnGatew
   }
 
   @SubscribeMessage('presence.ping')
-  async ping(@ConnectedSocket() client: AuthedSocket) {
-    const user = client.data.user;
+  async ping(@ConnectedSocket() client: Socket) {
+    const user = socketUser(client);
     if (!user) return { ok: false };
     await this.inbox.heartbeat(user.id);
     return { ok: true };
@@ -109,7 +110,12 @@ export class InboxGateway implements OnGatewayInit, OnGatewayConnection, OnGatew
     try {
       const payload = await this.tokens.verifyAccess(token);
       const session = await this.prisma.session.findFirst({
-        where: { id: payload.sid, userId: payload.sub, revokedAt: null, expiresAt: { gt: new Date() } },
+        where: {
+          id: payload.sid,
+          userId: payload.sub,
+          revokedAt: null,
+          expiresAt: { gt: new Date() },
+        },
       });
       if (!session) return null;
       return { id: payload.sub, handle: payload.hdl };
@@ -120,11 +126,25 @@ export class InboxGateway implements OnGatewayInit, OnGatewayConnection, OnGatew
   }
 }
 
+function socketUser(client: Socket): SocketUser | undefined {
+  const data = client.data as { user?: unknown };
+  const user = data.user;
+  if (!user || typeof user !== 'object') return undefined;
+  const record = user as { id?: unknown; handle?: unknown };
+  if (typeof record.id !== 'string' || typeof record.handle !== 'string') return undefined;
+  return { id: record.id, handle: record.handle };
+}
+
+function rememberSocketUser(client: Socket, user: SocketUser): void {
+  (client.data as { user?: SocketUser }).user = user;
+}
+
 function readSocketToken(client: Socket): string | undefined {
   const auth = client.handshake.auth as { token?: unknown };
   if (typeof auth?.token === 'string' && auth.token.length > 0) return auth.token;
   const header = client.handshake.headers.authorization;
-  if (typeof header === 'string' && header.startsWith('Bearer ')) return header.slice('Bearer '.length).trim();
+  if (typeof header === 'string' && header.startsWith('Bearer '))
+    return header.slice('Bearer '.length).trim();
   const cookie = client.handshake.headers.cookie;
   if (!cookie) return undefined;
   for (const part of cookie.split(';')) {

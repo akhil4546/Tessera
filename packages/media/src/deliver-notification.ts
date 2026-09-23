@@ -1,5 +1,5 @@
 import type { TesseraPrisma } from '@tessera/db';
-import type { NotificationKind, SecurityAlertKind } from '@tessera/types';
+import type { SecurityAlertKind } from '@tessera/types';
 import { formatActivityCopy, mergeNotificationPreferences, parseActorIds, shouldSendChannel } from './notifications.ts';
 import { expoConfigured, sendExpoPush, vapidConfigured, type ExpoPushMessage } from './push.ts';
 import type { MediaLogger } from './process-media.ts';
@@ -54,7 +54,7 @@ export async function deliverNotificationRecord(
       ? (row.payload as Record<string, unknown>)
       : {};
   const body = formatActivityCopy({
-    kind: row.kind as NotificationKind,
+    kind: row.kind,
     actors: ordered,
     actorCount: row.actorCount,
     securityKind: (payload.securityKind as SecurityAlertKind | undefined) ?? null,
@@ -62,12 +62,12 @@ export async function deliverNotificationRecord(
   const now = new Date();
   const href = row.href;
 
-  if (shouldSendChannel({ prefs, kind: row.kind as NotificationKind, channel: 'email', now })) {
+  if (shouldSendChannel({ prefs, kind: row.kind, channel: 'email', now })) {
     if (row.kind === 'security_alert') await ports.mail.sendSecurity(recipient.email, body);
     else await ports.mail.sendActivity(recipient.email, 'Tessera', body, href);
   }
 
-  if (!shouldSendChannel({ prefs, kind: row.kind as NotificationKind, channel: 'push', now })) return;
+  if (!shouldSendChannel({ prefs, kind: row.kind, channel: 'push', now })) return;
 
   const devices = await prisma.device.findMany({ where: { userId: row.recipientId } });
   if (devices.length === 0) {

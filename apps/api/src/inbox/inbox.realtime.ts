@@ -24,7 +24,9 @@ export class InboxRealtime implements OnModuleDestroy {
     if (!this.redis) {
       this.redis = new Redis(url, { maxRetriesPerRequest: 1, lazyConnect: true });
       this.redis.on('error', (err) => {
-        this.log.warn(`SOFT-FAIL: Redis presence error (${err.message}). Using in-memory presence.`);
+        this.log.warn(
+          `SOFT-FAIL: Redis presence error (${err.message}). Using in-memory presence.`,
+        );
         this.redisDisabled = true;
       });
     }
@@ -76,7 +78,7 @@ export class InboxRealtime implements OnModuleDestroy {
     }
   }
 
-  async onModuleDestroy(): Promise<void> {
+  onModuleDestroy(): void {
     this.redis?.disconnect();
     this.redis = null;
   }

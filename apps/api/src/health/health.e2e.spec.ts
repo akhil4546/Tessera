@@ -13,8 +13,8 @@ const originalMeiliKey = process.env.MEILI_API_KEY;
 
 describe('GET /health (e2e)', () => {
   let app: INestApplication;
-  const query = vi.fn(async () => [{ ok: 1 }]);
-  const probe = vi.fn(async () => undefined);
+  const query = vi.fn(() => Promise.resolve([{ ok: 1 }]));
+  const probe = vi.fn(() => Promise.resolve());
 
   beforeAll(async () => {
     delete process.env.REDIS_URL;

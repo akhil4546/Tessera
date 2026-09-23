@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button, Tile } from '@tessera/ui';
@@ -17,17 +17,21 @@ const SLIDERS = [
 export default function TuneDiscoverPage() {
   const t = useTranslations();
   const queryClient = useQueryClient();
-  const weights = useQuery({ queryKey: ['discover', 'tuning'], queryFn: () => api.getDiscoverTuning() });
+  const weights = useQuery({
+    queryKey: ['discover', 'tuning'],
+    queryFn: () => api.getDiscoverTuning(),
+  });
   const [draft, setDraft] = useState({
     peopleIInteractWith: 0.5,
     newCreators: 0.5,
     nearby: 0.5,
     lessVideo: 0,
   });
-
-  useEffect(() => {
-    if (weights.data) setDraft(weights.data);
-  }, [weights.data]);
+  const [seenWeights, setSeenWeights] = useState(weights.data);
+  if (weights.data && weights.data !== seenWeights) {
+    setSeenWeights(weights.data);
+    setDraft(weights.data);
+  }
 
   const save = useMutation({
     mutationFn: () => api.setDiscoverTuning(draft),
@@ -39,9 +43,13 @@ export default function TuneDiscoverPage() {
 
   return (
     <div className="mx-auto flex max-w-xl flex-col gap-6">
-      <p className="text-xs font-medium uppercase tracking-[0.18em] text-slate">{t('discover.tuneTitle')}</p>
+      <p className="text-xs font-medium uppercase tracking-[0.18em] text-slate">
+        {t('discover.tuneTitle')}
+      </p>
       <Tile>
-        <h1 className="font-display text-3xl font-semibold text-text-primary">{t('discover.tuneTitle')}</h1>
+        <h1 className="font-display text-3xl font-semibold text-text-primary">
+          {t('discover.tuneTitle')}
+        </h1>
         <p className="mt-3 text-text-secondary">{t('discover.tuneBody')}</p>
         <form
           className="mt-6 flex flex-col gap-6"

@@ -14,10 +14,16 @@ import {
 
 describe('aggregation keys', () => {
   it('collapses appreciations on the same post and keeps follow requests distinct', () => {
-    expect(aggregateKeyFor({ kind: 'appreciation', targetId: 'post-1' })).toBe('appreciation:post-1');
+    expect(aggregateKeyFor({ kind: 'appreciation', targetId: 'post-1' })).toBe(
+      'appreciation:post-1',
+    );
     expect(aggregateKeyFor({ kind: 'new_follower', actorId: 'a' })).toBe('new_follower');
-    expect(aggregateKeyFor({ kind: 'follow_request', actorId: 'june' })).toBe('follow_request:june');
-    expect(aggregateKeyFor({ kind: 'follow_request', actorId: 'omar' })).toBe('follow_request:omar');
+    expect(aggregateKeyFor({ kind: 'follow_request', actorId: 'june' })).toBe(
+      'follow_request:june',
+    );
+    expect(aggregateKeyFor({ kind: 'follow_request', actorId: 'omar' })).toBe(
+      'follow_request:omar',
+    );
     expect(
       aggregateKeyFor({ kind: 'security_alert', securityKind: 'password_changed', unique: 'tok' }),
     ).toBe('security:password_changed:tok');
@@ -32,6 +38,8 @@ describe('actor merge', () => {
     expect(second.actorCount).toBe(2);
     expect(second.actorIds[0]).toBe('ravi');
     const third = mergeActors(['ravi', 'asha'], 'nia', 2);
+    expect(third.actorIds).toEqual(['nia', 'ravi', 'asha']);
+    expect(third.actorCount).toBe(3);
     const fourth = mergeActors(['nia', 'ravi', 'asha'], 'mara', 3);
     expect(fourth.actorIds).toEqual(['mara', 'nia', 'ravi']);
     expect(fourth.actorCount).toBe(4);
@@ -87,11 +95,21 @@ describe('quiet hours and channels', () => {
     const morning = new Date('2026-09-18T08:00:00.000Z');
     expect(inQuietHours(late, prefs)).toBe(true);
     expect(inQuietHours(morning, prefs)).toBe(false);
-    expect(shouldSendChannel({ prefs, kind: 'appreciation', channel: 'inApp', now: late })).toBe(true);
-    expect(shouldSendChannel({ prefs, kind: 'appreciation', channel: 'push', now: late })).toBe(false);
-    expect(shouldSendChannel({ prefs, kind: 'appreciation', channel: 'email', now: late })).toBe(false);
-    expect(shouldSendChannel({ prefs, kind: 'security_alert', channel: 'email', now: late })).toBe(true);
-    expect(shouldSendChannel({ prefs, kind: 'security_alert', channel: 'push', now: late })).toBe(true);
+    expect(shouldSendChannel({ prefs, kind: 'appreciation', channel: 'inApp', now: late })).toBe(
+      true,
+    );
+    expect(shouldSendChannel({ prefs, kind: 'appreciation', channel: 'push', now: late })).toBe(
+      false,
+    );
+    expect(shouldSendChannel({ prefs, kind: 'appreciation', channel: 'email', now: late })).toBe(
+      false,
+    );
+    expect(shouldSendChannel({ prefs, kind: 'security_alert', channel: 'email', now: late })).toBe(
+      true,
+    );
+    expect(shouldSendChannel({ prefs, kind: 'security_alert', channel: 'push', now: late })).toBe(
+      true,
+    );
   });
 
   it('holds non-security email when a digest is on', () => {

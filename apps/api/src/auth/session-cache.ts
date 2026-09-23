@@ -157,8 +157,9 @@ function parseRead(result: unknown): { row: string | null; gen: number } {
   if (!Array.isArray(result) || result.length < 2) {
     throw new Error('session cache read returned an unexpected value');
   }
-  const row = result[0];
-  const gen = Number(result[1]);
+  const tuple = result as unknown[];
+  const row = tuple[0];
+  const gen = Number(tuple[1]);
   if (row !== null && row !== false && typeof row !== 'string') {
     throw new Error('session cache read returned a non-string row');
   }
@@ -271,11 +272,12 @@ export class SessionCache implements OnModuleDestroy {
     return result.count;
   }
 
-  async onModuleDestroy(): Promise<void> {
+  onModuleDestroy(): Promise<void> {
     if (this.redis) {
       this.redis.disconnect();
       this.redis = null;
     }
+    return Promise.resolve();
   }
 
   private async load(sessionId: string, userId: string): Promise<SessionAccount | null> {

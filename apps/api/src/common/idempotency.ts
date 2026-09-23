@@ -29,14 +29,14 @@ export type IdempotencyBegin = { kind: 'replay'; body: unknown } | { kind: 'proc
  * Idempotency-Key is optional. Empty means the client did not ask for replay.
  * 'invalid' means the header was present but unusable.
  */
-export function readIdempotencyKey(
-  header: string | string[] | undefined,
-): string | null | 'invalid' {
+export function readIdempotencyKey(header: string | string[] | undefined): string | null {
   if (header === undefined) return null;
   if (Array.isArray(header)) return 'invalid';
   const key = header.trim();
   if (!key) return null;
   if (key.length > IDEMPOTENCY_KEY_MAX) return 'invalid';
+  // The class is the ASCII controls themselves, which this key must reject.
+  // eslint-disable-next-line no-control-regex
   if (/[\u0000-\u001f\u007f]/.test(key)) return 'invalid';
   return key;
 }
@@ -50,12 +50,24 @@ export function idempotencyRoute(
   for (const key of Object.keys(query ?? {}).sort()) {
     const value = query?.[key];
     if (value === undefined) continue;
-    const items = Array.isArray(value) ? value.map((item) => String(item)).sort() : [String(value)];
+    const rawItems = Array.isArray(value) ? value : [value];
+    const items = rawItems.flatMap((item) => {
+      const text = queryItem(item);
+      return text === null ? [] : [text];
+    });
+    items.sort();
     for (const item of items) params.append(key, item);
   }
   const qs = params.toString();
   const clean = path.split('?')[0] || '/';
   return qs ? `${method.toUpperCase()} ${clean}?${qs}` : `${method.toUpperCase()} ${clean}`;
+}
+
+function queryItem(value: unknown): string | null {
+  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+    return String(value);
+  }
+  return null;
 }
 
 export function hashIdempotencyBody(body: unknown): string {
@@ -111,7 +123,7 @@ function sortValue(value: unknown): unknown {
     !(value instanceof Uint8Array)
   ) {
     const sorted: Record<string, unknown> = {};
-    for (const key of Object.keys(value as Record<string, unknown>).sort()) {
+    for (const key of Object.keys(value).sort()) {
       const item = (value as Record<string, unknown>)[key];
       if (item !== undefined) sorted[key] = sortValue(item);
     }
@@ -129,12 +141,7 @@ function envelope(hash: string, response: unknown): Prisma.InputJsonValue {
 }
 
 function isUniqueViolation(error: unknown): boolean {
-  return (
-    typeof error === 'object' &&
-    error !== null &&
-    'code' in error &&
-    (error as { code: unknown }).code === 'P2002'
-  );
+  return typeof error === 'object' && error !== null && 'code' in error && error.code === 'P2002';
 }
 
 @Injectable()

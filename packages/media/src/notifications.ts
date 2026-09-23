@@ -29,7 +29,10 @@ export const DEFAULT_CHANNEL_PREFS: NotificationChannelMap = {
   security_alert: { inApp: true, push: true, email: true },
 };
 
-export const ACTIVITY_FILTER_KINDS: Record<'mentions' | 'appreciations' | 'follows', NotificationKind[]> = {
+export const ACTIVITY_FILTER_KINDS: Record<
+  'mentions' | 'appreciations' | 'follows',
+  NotificationKind[]
+> = {
   mentions: ['mention', 'tag'],
   appreciations: ['appreciation', 'moment_reaction'],
   follows: ['new_follower', 'follow_request'],
@@ -133,8 +136,11 @@ export function aggregateKeyFor(input: {
       return `scheduled_post:${input.targetId ?? 'unknown'}`;
     case 'security_alert':
       return `security:${input.securityKind ?? 'alert'}:${input.unique ?? Date.now().toString()}`;
-    default:
-      return `${input.kind}:${input.targetId ?? 'unknown'}`;
+    default: {
+      const unexpected: never = input.kind;
+      void unexpected;
+      return `activity:unhandled:${input.targetId ?? 'unknown'}`;
+    }
   }
 }
 
@@ -144,7 +150,10 @@ export function mergeActors(
   existingCount: number,
 ): { actorIds: string[]; actorCount: number; isNew: boolean } {
   const isNew = !existing.includes(actorId);
-  const actorIds = [actorId, ...existing.filter((id) => id !== actorId)].slice(0, MAX_STORED_ACTORS);
+  const actorIds = [actorId, ...existing.filter((id) => id !== actorId)].slice(
+    0,
+    MAX_STORED_ACTORS,
+  );
   return {
     actorIds,
     actorCount: isNew ? existingCount + 1 : Math.max(existingCount, 1),
@@ -197,7 +206,10 @@ export function minutesInTimeZone(now: Date, timeZone: string): number {
 
 export function inQuietHours(
   now: Date,
-  prefs: Pick<NotificationPreferences, 'quietHoursEnabled' | 'quietHoursStartMinutes' | 'quietHoursEndMinutes' | 'timezone'>,
+  prefs: Pick<
+    NotificationPreferences,
+    'quietHoursEnabled' | 'quietHoursStartMinutes' | 'quietHoursEndMinutes' | 'timezone'
+  >,
 ): boolean {
   if (!prefs.quietHoursEnabled) return false;
   const start = prefs.quietHoursStartMinutes;

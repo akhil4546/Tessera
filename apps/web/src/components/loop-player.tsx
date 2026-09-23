@@ -1,10 +1,16 @@
 'use client';
 
 import Link from 'next/link';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { APPRECIATION_TYPES, appreciationMeta, type AppreciationType, type PostCard, type WellbeingView } from '@tessera/types';
+import {
+  APPRECIATION_TYPES,
+  appreciationMeta,
+  type AppreciationType,
+  type PostCard,
+  type WellbeingView,
+} from '@tessera/types';
 import { Button, EmptyState, TextField } from '@tessera/ui';
 import { TesseraApiError } from '@tessera/api-client';
 import { api } from '../lib/api';
@@ -45,9 +51,13 @@ function LoopSlide({
     const el = videoRef.current;
     if (!el) return;
     el.muted = muted;
+    const captionTrack = el.textTracks[0];
+    if (captionTrack) {
+      captionTrack.mode = captionsOn && post.loop?.captionsUrl ? 'showing' : 'disabled';
+    }
     if (active) void el.play().catch(() => undefined);
     else el.pause();
-  }, [active, muted]);
+  }, [active, captionsOn, muted, post.loop?.captionsUrl]);
 
   return (
     <div className="relative flex h-[min(92vh,820px)] w-full max-w-[420px] snap-start items-center justify-center overflow-hidden rounded-tile-lg bg-ink">
@@ -61,9 +71,12 @@ function LoopSlide({
         onEnded={onEnded}
         aria-label={media?.altText || post.caption || 'Loop'}
       >
-        {captionsOn && post.loop?.captionsUrl ? (
-          <track kind="captions" src={mediaSrc(post.loop.captionsUrl)} default srcLang="en" label="Captions" />
-        ) : null}
+        <track
+          kind="captions"
+          src={post.loop?.captionsUrl ? mediaSrc(post.loop.captionsUrl) : undefined}
+          srcLang="en"
+          label="Captions"
+        />
       </video>
       {overlays.map((overlay) => {
         const show = true;
@@ -132,16 +145,22 @@ export function LoopPlayer({ startId }: { startId?: string }) {
   });
 
   const [wellbeing, setWellbeing] = useState<WellbeingView | null>(null);
-  useEffect(() => {
-    if (feed.data?.wellbeing) setWellbeing(feed.data.wellbeing);
-  }, [feed.data?.wellbeing]);
+  const wellbeingSource = feed.data?.wellbeing;
+  const [seenWellbeing, setSeenWellbeing] = useState(wellbeingSource);
+  if (wellbeingSource && wellbeingSource !== seenWellbeing) {
+    setSeenWellbeing(wellbeingSource);
+    setWellbeing(wellbeingSource);
+  }
 
-  const items = feed.data?.items ?? [];
-  useEffect(() => {
-    if (!startId || items.length === 0) return;
+  const items = useMemo(() => feed.data?.items ?? [], [feed.data?.items]);
+  const startKey =
+    startId && items.length > 0 ? `${startId}:${items.map((item) => item.id).join(',')}` : null;
+  const [appliedStart, setAppliedStart] = useState<string | null>(null);
+  if (startKey && appliedStart !== startKey) {
+    setAppliedStart(startKey);
     const at = items.findIndex((item) => item.id === startId);
     if (at >= 0) setIndex(at);
-  }, [startId, items]);
+  }
 
   const current = items[index];
   const reduced =
@@ -150,7 +169,9 @@ export function LoopPlayer({ startId }: { startId?: string }) {
   const appreciate = useMutation({
     mutationFn: (input: { id: string; type: AppreciationType }) => {
       const post = items.find((row) => row.id === input.id);
-      return post?.appreciation.mine === input.type ? api.unappreciate(input.id) : api.appreciate(input.id, input.type);
+      return post?.appreciation.mine === input.type
+        ? api.unappreciate(input.id)
+        : api.appreciate(input.id, input.type);
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['loops'] }),
   });
@@ -172,7 +193,10 @@ export function LoopPlayer({ startId }: { startId?: string }) {
   useEffect(() => {
     if (!current || wellbeing?.paused) return;
     watchTick.current = setInterval(() => {
-      void api.watchLoop(current.id, 5).then(setWellbeing).catch(() => undefined);
+      void api
+        .watchLoop(current.id, 5)
+        .then(setWellbeing)
+        .catch(() => undefined);
     }, 5000);
     return () => {
       if (watchTick.current) clearInterval(watchTick.current);
@@ -317,7 +341,12 @@ export function LoopPlayer({ startId }: { startId?: string }) {
               if (draft.trim()) sendComment.mutate();
             }}
           >
-            <TextField name="comment" label={t('feed.writeComment')} value={draft} onChange={(e) => setDraft(e.target.value)} />
+            <TextField
+              name="comment"
+              label={t('feed.writeComment')}
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+            />
             <Button type="submit">{t('feed.reply')}</Button>
           </form>
         </div>
@@ -329,7 +358,11 @@ export function LoopPlayer({ startId }: { startId?: string }) {
             <h2 className="font-display text-2xl text-text-primary">{t('loop.pauseTitle')}</h2>
             <p className="mt-2 text-text-secondary">{t('loop.pauseBody')}</p>
             <div className="mt-4 flex flex-col gap-2">
-              <Button type="button" variant="secondary" onClick={() => (window.location.href = '/')}>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => (window.location.href = '/')}
+              >
                 {t('loop.stop')}
               </Button>
               <Button

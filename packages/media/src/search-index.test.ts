@@ -4,7 +4,13 @@ import { meiliConfig, probeMeilisearch, SEARCH_INDEXES } from './search-index.ts
 describe('search-index', () => {
   it('exports the four Meilisearch indexes from the spec', () => {
     expect(Object.values(SEARCH_INDEXES).sort()).toEqual(
-      ['tessera_boards', 'tessera_captions', 'tessera_hashtags', 'tessera_people', 'tessera_places'].sort(),
+      [
+        'tessera_boards',
+        'tessera_captions',
+        'tessera_hashtags',
+        'tessera_people',
+        'tessera_places',
+      ].sort(),
     );
   });
 
@@ -43,7 +49,7 @@ describe('probeMeilisearch', () => {
   it('is ok when Meilisearch /health returns 200', async () => {
     process.env.MEILI_HOST = 'http://search.test/';
     process.env.MEILI_API_KEY = 'secret-key';
-    const fetchMock = vi.fn(async () => new Response('ok', { status: 200 }));
+    const fetchMock = vi.fn(() => Promise.resolve(new Response('ok', { status: 200 })));
     vi.stubGlobal('fetch', fetchMock);
     await expect(probeMeilisearch(200)).resolves.toBe('ok');
     expect(fetchMock).toHaveBeenCalledWith(
@@ -59,9 +65,7 @@ describe('probeMeilisearch', () => {
     process.env.MEILI_API_KEY = 'secret-key';
     vi.stubGlobal(
       'fetch',
-      vi.fn(async () => {
-        throw new Error('connection refused');
-      }),
+      vi.fn(() => Promise.reject(new Error('connection refused'))),
     );
     await expect(probeMeilisearch(200)).resolves.toBe('down');
   });

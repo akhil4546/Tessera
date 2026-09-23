@@ -3,7 +3,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { QUICK_EMOJIS, type MomentAuthorReel, type MomentCard, type ReelShelfDetail } from '@tessera/types';
+import {
+  QUICK_EMOJIS,
+  type MomentAuthorReel,
+  type MomentCard,
+  type ReelShelfDetail,
+} from '@tessera/types';
 import { TesseraApiError } from '@tessera/api-client';
 import { Button } from '@tessera/ui';
 import { api } from '../lib/api';
@@ -37,6 +42,13 @@ export function MomentViewer({
 
   const [index, setIndex] = useState(0);
   const [seg, setSeg] = useState(0);
+  const shelfKey = `${handle}:${shelfId ?? ''}`;
+  const [seenShelf, setSeenShelf] = useState(shelfKey);
+  if (seenShelf !== shelfKey) {
+    setSeenShelf(shelfKey);
+    setIndex(0);
+    setSeg(0);
+  }
   const [paused, setPaused] = useState(false);
   const [keepTitle, setKeepTitle] = useState('Kept light');
   const [keepOpen, setKeepOpen] = useState(false);
@@ -103,11 +115,6 @@ export function MomentViewer({
   }, [handle, index, moments, neighbours, onSwitch, seg]);
 
   useEffect(() => {
-    setIndex(0);
-    setSeg(0);
-  }, [handle, shelfId]);
-
-  useEffect(() => {
     if (moment && segment && !segment.viewedByMe) {
       view.mutate();
     }
@@ -171,9 +178,21 @@ export function MomentViewer({
           onPointerUp={() => setPaused(false)}
           onPointerLeave={() => setPaused(false)}
         >
-          {src ? <img src={src} alt={segment.media.altText} className="h-full w-full object-contain" /> : null}
-          <button type="button" aria-label={t('moment.previous')} className="absolute inset-y-0 left-0 w-1/3" onClick={goPrev} />
-          <button type="button" aria-label={t('moment.next')} className="absolute inset-y-0 right-0 w-1/3" onClick={goNext} />
+          {src ? (
+            <img src={src} alt={segment.media.altText} className="h-full w-full object-contain" />
+          ) : null}
+          <button
+            type="button"
+            aria-label={t('moment.previous')}
+            className="absolute inset-y-0 left-0 w-1/3"
+            onClick={goPrev}
+          />
+          <button
+            type="button"
+            aria-label={t('moment.next')}
+            className="absolute inset-y-0 right-0 w-1/3"
+            onClick={goNext}
+          />
           {segment.stickers.map((sticker) => (
             <div
               key={sticker.id}
@@ -184,15 +203,17 @@ export function MomentViewer({
                 transform: `translate(-50%, -50%) rotate(${sticker.rotation}deg) scale(${sticker.scale})`,
               }}
             >
-              {sticker.kind === 'text' ? String(sticker.payload.text ?? '') : null}
-              {sticker.kind === 'hashtag' ? `#${String(sticker.payload.tag ?? '')}` : null}
-              {sticker.kind === 'mention' ? `@${String(sticker.payload.handle ?? '')}` : null}
-              {sticker.kind === 'location' ? String(sticker.payload.name ?? '') : null}
-              {sticker.kind === 'link' ? String(sticker.payload.label ?? sticker.payload.url ?? '') : null}
-              {sticker.kind === 'countdown' ? String(sticker.payload.endsAt ?? '') : null}
+              {sticker.kind === 'text' ? stickerText(sticker.payload.text) : null}
+              {sticker.kind === 'hashtag' ? `#${stickerText(sticker.payload.tag)}` : null}
+              {sticker.kind === 'mention' ? `@${stickerText(sticker.payload.handle)}` : null}
+              {sticker.kind === 'location' ? stickerText(sticker.payload.name) : null}
+              {sticker.kind === 'link'
+                ? stickerText(sticker.payload.label) || stickerText(sticker.payload.url)
+                : null}
+              {sticker.kind === 'countdown' ? stickerText(sticker.payload.endsAt) : null}
               {sticker.kind === 'poll' ? (
                 <div className="flex flex-col gap-1">
-                  <p>{String(sticker.payload.prompt ?? '')}</p>
+                  <p>{stickerText(sticker.payload.prompt)}</p>
                   {Array.isArray(sticker.payload.options)
                     ? sticker.payload.options.map((option, optionIndex) => (
                         <button
@@ -200,11 +221,16 @@ export function MomentViewer({
                           type="button"
                           className="rounded-tile bg-surface/20 px-2 py-1 text-left"
                           onClick={() =>
-                            void api.respondToSticker(moment.id, sticker.id, { optionIndex }).then(invalidate)
+                            void api
+                              .respondToSticker(moment.id, sticker.id, { optionIndex })
+                              .then(invalidate)
                           }
                         >
                           {String(option)}
-                          {sticker.summary && Array.isArray((sticker.summary as { options?: { votes: number }[] }).options)
+                          {sticker.summary &&
+                          Array.isArray(
+                            (sticker.summary as { options?: { votes: number }[] }).options,
+                          )
                             ? ` · ${(sticker.summary as { options: { votes: number }[] }).options[optionIndex]?.votes ?? 0}`
                             : ''}
                         </button>
@@ -223,7 +249,7 @@ export function MomentViewer({
                     });
                   }}
                 >
-                  <p>{String(sticker.payload.prompt ?? '')}</p>
+                  <p>{stickerText(sticker.payload.prompt)}</p>
                   <input
                     value={answer}
                     onChange={(e) => setAnswer(e.target.value)}
@@ -268,7 +294,11 @@ export function MomentViewer({
             {t('moment.reply')}
           </button>
           {moment.viewer.canKeep ? (
-            <button type="button" className="min-h-11 rounded-tile bg-moss px-3" onClick={() => setKeepOpen(true)}>
+            <button
+              type="button"
+              className="min-h-11 rounded-tile bg-moss px-3"
+              onClick={() => setKeepOpen(true)}
+            >
               {t('moment.keep')}
             </button>
           ) : null}
@@ -290,4 +320,8 @@ export function MomentViewer({
       </div>
     </div>
   );
+}
+
+function stickerText(value: unknown): string {
+  return typeof value === 'string' ? value : '';
 }

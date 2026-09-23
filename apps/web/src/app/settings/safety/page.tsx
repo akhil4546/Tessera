@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { type FormEvent, useEffect, useState } from 'react';
+import { type FormEvent, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { SensitivityLevel } from '@tessera/types';
@@ -13,15 +13,31 @@ export default function SafetySettingsPage() {
   const t = useTranslations();
   const queryClient = useQueryClient();
   const me = useQuery({ queryKey: ['me'], queryFn: () => api.getMe() });
-  const wellbeing = useQuery({ queryKey: ['wellbeing'], queryFn: () => api.getWellbeing(), enabled: Boolean(me.data) });
-  const blocked = useQuery({ queryKey: ['blocked'], queryFn: () => api.listBlocked(), enabled: Boolean(me.data) });
-  const muted = useQuery({ queryKey: ['muted'], queryFn: () => api.listMuted(), enabled: Boolean(me.data) });
+  const wellbeing = useQuery({
+    queryKey: ['wellbeing'],
+    queryFn: () => api.getWellbeing(),
+    enabled: Boolean(me.data),
+  });
+  const blocked = useQuery({
+    queryKey: ['blocked'],
+    queryFn: () => api.listBlocked(),
+    enabled: Boolean(me.data),
+  });
+  const muted = useQuery({
+    queryKey: ['muted'],
+    queryFn: () => api.listMuted(),
+    enabled: Boolean(me.data),
+  });
   const restricted = useQuery({
     queryKey: ['restricted'],
     queryFn: () => api.listRestricted(),
     enabled: Boolean(me.data),
   });
-  const exports = useQuery({ queryKey: ['exports'], queryFn: () => api.listExports(), enabled: Boolean(me.data) });
+  const exports = useQuery({
+    queryKey: ['exports'],
+    queryFn: () => api.listExports(),
+    enabled: Boolean(me.data),
+  });
   const [sensitivity, setSensitivity] = useState<SensitivityLevel>('warn');
   const [dailyReminder, setDailyReminder] = useState<number | null>(null);
   const [sessionNudge, setSessionNudge] = useState<number | null>(null);
@@ -29,19 +45,27 @@ export default function SafetySettingsPage() {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (me.data) setSensitivity(me.data.sensitivityLevel);
-  }, [me.data]);
-  useEffect(() => {
-    if (!wellbeing.data) return;
-    setDailyReminder(wellbeing.data.dailyReminderMinutes);
-    setSessionNudge(wellbeing.data.sessionNudgeMinutes);
-  }, [wellbeing.data]);
+  const profile = me.data;
+  const [seenProfile, setSeenProfile] = useState(profile);
+  if (profile && profile !== seenProfile) {
+    setSeenProfile(profile);
+    setSensitivity(profile.sensitivityLevel);
+  }
+  const budget = wellbeing.data;
+  const [seenBudget, setSeenBudget] = useState(budget);
+  if (budget && budget !== seenBudget) {
+    setSeenBudget(budget);
+    setDailyReminder(budget.dailyReminderMinutes);
+    setSessionNudge(budget.sessionNudgeMinutes);
+  }
 
   const save = useMutation({
     mutationFn: async () => {
       await api.setSensitivity(sensitivity);
-      await api.setWellbeing({ dailyReminderMinutes: dailyReminder, sessionNudgeMinutes: sessionNudge });
+      await api.setWellbeing({
+        dailyReminderMinutes: dailyReminder,
+        sessionNudgeMinutes: sessionNudge,
+      });
     },
     onSuccess: async () => {
       setMessage('Saved.');
@@ -69,7 +93,9 @@ export default function SafetySettingsPage() {
 
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-6">
-      <p className="text-xs font-medium uppercase tracking-[0.18em] text-slate">{t('settings.safety')}</p>
+      <p className="text-xs font-medium uppercase tracking-[0.18em] text-slate">
+        {t('settings.safety')}
+      </p>
       <Tile>
         <form className="flex flex-col gap-4" onSubmit={onSubmit}>
           <label className="flex min-h-11 flex-col gap-1 text-sm">
@@ -152,7 +178,11 @@ export default function SafetySettingsPage() {
           className="mt-3"
           type="button"
           variant="secondary"
-          onClick={() => void api.requestExport().then(() => queryClient.invalidateQueries({ queryKey: ['exports'] }))}
+          onClick={() =>
+            void api
+              .requestExport()
+              .then(() => queryClient.invalidateQueries({ queryKey: ['exports'] }))
+          }
         >
           {t('settings.exportStart')}
         </Button>
@@ -177,7 +207,11 @@ export default function SafetySettingsPage() {
         <p className="font-medium">{t('settings.deleteAccount')}</p>
         <p className="mt-1 text-sm text-text-secondary">{t('settings.deleteHint')}</p>
         {me.data.deletion.pending ? (
-          <Button className="mt-3" type="button" onClick={() => void api.cancelDeletion().then(() => me.refetch())}>
+          <Button
+            className="mt-3"
+            type="button"
+            onClick={() => void api.cancelDeletion().then(() => me.refetch())}
+          >
             {t('settings.deleteCancel')}
           </Button>
         ) : (

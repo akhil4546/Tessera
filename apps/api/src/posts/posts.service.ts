@@ -567,7 +567,7 @@ export class PostsService {
       media,
       authorAvatarUrl: await this.storage.signGet(post.author.profile?.avatarKey ?? null),
       viewerId,
-      mine: (post.appreciations.find((row) => row.userId === viewerId)?.kind ?? null) as AppreciationType | null,
+      mine: (post.appreciations.find((row) => row.userId === viewerId)?.kind ?? null),
       counts: tallyAppreciations(post.appreciations),
       commentCount: post._count.comments,
       mentions,

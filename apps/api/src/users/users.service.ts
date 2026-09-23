@@ -14,6 +14,13 @@ import { PrismaService } from '../prisma/prisma.service.js';
 import { StorageService } from '../storage/storage.service.js';
 import { emptyViewer, handleCooldownEnds, toMeProfile, toPublicProfile } from './profile.mapper.js';
 
+function followRelationStatus(
+  status: string | null | undefined,
+): 'none' | 'pending' | 'accepted' {
+  if (status === 'pending' || status === 'accepted') return status;
+  return 'none';
+}
+
 type UserWithProfile = Prisma.UserGetPayload<{ include: { profile: true } }> & {
   profile: NonNullable<Prisma.UserGetPayload<{ include: { profile: true } }>['profile']>;
 };
@@ -313,7 +320,7 @@ export class UsersService {
       isSelf: false,
       following: outgoing?.status === 'accepted',
       followedBy: incoming?.status === 'accepted',
-      followStatus: (outgoing?.status ?? 'none') as 'none' | 'pending' | 'accepted',
+      followStatus: followRelationStatus(outgoing?.status),
       blockedByMe: Boolean(block),
       mutedByMe: Boolean(mute),
       muteScope: mute?.scope ?? null,

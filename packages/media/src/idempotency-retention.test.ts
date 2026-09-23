@@ -12,9 +12,9 @@ describe('purgeIdempotencyRecords', () => {
     let where: unknown;
     const prisma = {
       idempotencyRecord: {
-        deleteMany: async (args: { where: unknown }) => {
+        deleteMany: (args: { where: unknown }) => {
           where = args.where;
-          return { count: 4 };
+          return Promise.resolve({ count: 4 });
         },
       },
     };
